@@ -1,0 +1,289 @@
+import { z } from 'zod';
+export { z } from 'zod';
+
+type Provider = {
+    apiKey: string;
+    baseURL: string;
+    headers?: Record<string, string>;
+    model: string;
+};
+type Tool = {
+    schema: {
+        type: 'function';
+        function: {
+            name: string;
+            description: string;
+            parameters: {
+                type: 'object';
+                properties?: Record<string, any>;
+                required?: string[];
+                additionalProperties: boolean;
+            };
+        };
+    };
+    execute: (args: any) => any;
+};
+type ContentPart = {
+    type: 'text';
+    text: string;
+} | {
+    type: 'image_url';
+    image_url: {
+        url: string;
+    };
+};
+type ContentOptions = string | null | ContentPart[];
+interface Message {
+    id?: string;
+    role: 'system' | 'user' | 'assistant' | 'tool';
+    content: ContentOptions;
+    name?: string;
+    tool_calls?: ToolCall[];
+    tool_call_id?: string;
+}
+type ToolCall = {
+    id: string;
+    type: 'function';
+    function: {
+        name: string;
+        arguments: string;
+    };
+};
+type ToolChoice = 'auto' | 'none' | 'required' | {
+    type: 'function';
+    function: {
+        name: string;
+    };
+};
+type ReasoningLevel = 'minimal' | 'low' | 'medium' | 'high';
+type ReasoningOptions = {
+    enabled?: boolean;
+    effort?: ReasoningLevel;
+};
+type TokenUsage = {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+};
+type Metadata = {
+    id: string;
+    prompt: string;
+    providerName: string;
+    model: string;
+    tokensUsed?: TokenUsage;
+    timing: {
+        latencyMs: number;
+        latencySeconds: number;
+    };
+    timestamp: string;
+    context: Record<string, any>;
+    isReasoningEnabled?: boolean | ReasoningLevel;
+    isReasoningModel?: boolean;
+    reasoning_effort?: ReasoningLevel;
+    hasThoughts?: boolean;
+};
+type ErrorPayload = {
+    type: 'timeout' | 'api_error';
+    message: string;
+    status?: number;
+    code?: string;
+    details?: any;
+};
+type Response = {
+    metadata: Metadata;
+    completion: {
+        role: string;
+        content: string;
+        reasoning?: string;
+        original: string;
+    };
+    error?: ErrorPayload;
+};
+type ToolResponse = {
+    toolName: string;
+    arguments: any;
+    result: any;
+    error?: any;
+};
+type OnCompleteResponse = (result: Response, messages?: Message[]) => void;
+type OnMessageResponse = (messages: Message[]) => void;
+type OnRequestData = (request: any) => void;
+type OnResponseData = (response: any) => void;
+type OnErrorResponse = (error: any) => void;
+type OnToolCall = (toolResponse: ToolResponse) => void;
+interface MicroOptions {
+    model?: string;
+    provider?: Provider;
+    systemPrompt?: string;
+    prompt?: string;
+    messages?: Message[];
+    context?: Record<string, any>;
+    maxTokens?: number;
+    temperature?: number;
+    tools?: Tool[];
+    tool_choice?: ToolChoice;
+    streaming?: boolean;
+    reasoning?: boolean;
+    reasoning_effort?: ReasoningLevel;
+    timeout?: number;
+    debug?: boolean;
+    onComplete?: OnCompleteResponse;
+    onMessage?: OnMessageResponse;
+    onRequest?: OnRequestData;
+    onResponseData?: OnResponseData;
+    onError?: OnErrorResponse;
+    onToolCall?: OnToolCall;
+}
+
+declare class Micro {
+    private axiosInstance;
+    private model;
+    private systemPrompt;
+    private messages;
+    private context;
+    private prompt;
+    private maxTokens?;
+    private temperature?;
+    private tools?;
+    private tool_choice?;
+    private streaming;
+    private parsedSystemPrompt;
+    private defaultProvider;
+    private modelName;
+    private providerName;
+    private identifier;
+    private timeout?;
+    private reasoning_effort?;
+    private onComplete?;
+    private onMessage?;
+    private onRequest?;
+    private onResponseData?;
+    private onError?;
+    private onToolCall?;
+    private debug;
+    private reasoning;
+    private isReasoningModel;
+    private isGemini25Reasoning;
+    private isOpenAIReasoning;
+    private isOpenAI5;
+    private isGLMReasoning;
+    private isQWQ;
+    private isDeepseekReasoning;
+    private isQwen3;
+    constructor(options?: MicroOptions);
+    getMetadata(): Metadata;
+    getSystemPrompt(): string;
+    setSystemPrompt(prompt: string): void;
+    private getSystemMessage;
+    private getNonSystemMessages;
+    flushAllMessages(): void;
+    limitMessages(limit?: number): Message[];
+    getMessages(): Message[];
+    setMessages(messages: Message[]): void;
+    setUserMessage(prompt: string, bufferString?: string): void;
+    setAssistantMessage(prompt: string): this;
+    private makeRequest;
+    private executeTool;
+    private handleToolCalls;
+    invoke(): Promise<Response>;
+    chat(prompt: string, bufferString?: string): Promise<Response>;
+}
+
+interface AgentOptions extends Omit<MicroOptions, 'prompt'> {
+    name: string;
+    instructions: string;
+    handoffs?: Agent[];
+    position?: string;
+}
+declare class Agent {
+    private client;
+    name: string;
+    instructions: string;
+    handoffs?: Agent[];
+    tools?: Tool[];
+    position: string | undefined;
+    model: string | undefined;
+    constructor(options: AgentOptions);
+    private handoffAgentToTools;
+    private toolsToStringList;
+    private handoffAgentToStringList;
+    invoke(): Promise<Response>;
+    chat(prompt: string): Promise<Response>;
+    getMessages(): Message[];
+    addPrompt(msg: string): void;
+    addAssistantPrompt(msg: string): void;
+    getMetadata(): Metadata;
+    static create(options: AgentOptions): Agent;
+}
+declare class Orchestrator extends Agent {
+    constructor(options: AgentOptions);
+    static create(options: AgentOptions): Orchestrator;
+}
+
+/**
+ * Creates a tool that can be used by agents to perform specific actions.
+ *
+ * @param name - The name of the tool
+ * @param description - A description of what the tool does
+ * @param schema - A trod schema defining the tool's parameters
+ * @param executeFn - The function to execute when the tool is called
+ * @returns A Tool object with schema and execute function
+ *
+ * @example
+ * ```typescript
+ * const weatherTool = createTool(
+ *   "get_weather",
+ *   "Get the current weather for a location",
+ *   z.object({
+ *     location: z.string().describe("The city and state, e.g. San Francisco, CA"),
+ *     unit: z.enum(["celsius", "fahrenheit"]).optional()
+ *   }),
+ *   async (params) => {
+ *     return `Weather in ${params.location}: 72°F, sunny`;
+ *   }
+ * );
+ * ```
+ */
+declare function createTool<T extends z.ZodTypeAny, R>(name: string, description: string, schema: T, executeFn: (params: z.infer<T>) => Promise<R> | R): Tool;
+
+/**
+ * Create a provider configuration object
+ * Separates the model from the provider config for internal use
+ */
+declare function createProvider(config: Provider): {
+    provider: Omit<Provider, 'model'>;
+    model: string;
+};
+/**
+ * Built-in provider configurations
+ * Each provider includes API endpoint, authentication, and default model
+ */
+declare const Providers: {
+    openai: (model?: string) => Provider;
+    groq: (model?: string) => Provider;
+    gemini: (model?: string) => Provider;
+    ai302: (model?: string) => Provider;
+    openrouter: (model?: string) => Provider;
+    deepseek: (model?: string) => Provider;
+    grok: (model?: string) => Provider;
+};
+
+/**
+ * Generate a random ID using crypto.randomUUID
+ */
+declare function randomId(): string;
+/**
+ * Parse template string and replace {{variable}} placeholders with context values
+ * @param template - Template string with {{variable}} placeholders
+ * @param context - Object containing variable values
+ * @returns Parsed string with variables replaced
+ */
+declare function parseTemplate(template: string, context?: Record<string, any>): string;
+/**
+ * Convert a string to a URL-friendly slug
+ * @param text - Text to slugify
+ * @returns Slugified text (lowercase, hyphens, alphanumeric)
+ */
+declare function slugify(text: string): string;
+
+export { Agent, type AgentOptions, type ContentOptions, type ContentPart, type ErrorPayload, type Message, type Metadata, Micro, type MicroOptions, type OnCompleteResponse, type OnErrorResponse, type OnMessageResponse, type OnRequestData, type OnResponseData, type OnToolCall, Orchestrator, type Provider, Providers, type ReasoningLevel, type ReasoningOptions, type Response, type TokenUsage, type Tool, type ToolCall, type ToolChoice, type ToolResponse, createProvider, createTool, parseTemplate, randomId, slugify };

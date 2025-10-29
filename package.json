@@ -1,0 +1,67 @@
+{
+  "name": "micro-ai-ts",
+  "version": "0.0.1",
+  "description": "A lightweight, beginner-friendly TypeScript library for building LLM-powered applications",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts --minify --treeshake",
+    "build:test": "tsup",
+    "dev": "tsup --watch",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:example": "tsx $1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "keywords": [
+    "llm",
+    "ai",
+    "openai",
+    "anthropic",
+    "gemini",
+    "glm",
+    "qwen",
+    "grok",
+    "groq",
+    "agent",
+    "typescript"
+  ],
+  "author": "https://github.com/thinnker",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "dedent": "^1.5.3",
+    "dotenv": "^17.2.3",
+    "hyperid": "^3.3.0",
+    "valibot": "^1.1.0",
+    "zod": "^3.25.76",
+    "zod-to-json-schema": "^3.24.6"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.38.0",
+    "@types/node": "^22.10.5",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
+    "@vitest/ui": "^4.0.4",
+    "eslint": "^9.38.0",
+    "prettier": "^3.6.2",
+    "tsup": "^8.3.5",
+    "tsx": "^4.20.6",
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.4"
+  }
+}

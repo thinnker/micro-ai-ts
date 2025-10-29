@@ -1,0 +1,776 @@
+# Micro AI Beginner's Guide
+
+Welcome! This guide will help you understand and use Micro AI, even if you've never worked with AI language models before.
+
+## What is Micro AI?
+
+Micro AI is a TypeScript library that makes it easy to add AI capabilities to your applications. Think of it as a friendly translator between your code and powerful AI models like ChatGPT, Claude, or Gemini.
+
+Instead of learning different APIs for each AI provider, you write code once and it works with all of them.
+
+## What Can You Build?
+
+- **Chatbots** - Create conversational assistants for your website or app
+- **Smart Tools** - Build AI that can search the web, call APIs, or interact with databases
+- **Multi-Agent Systems** - Coordinate multiple AI assistants that work together
+- **Reasoning Applications** - Use advanced AI models that can "think through" complex problems
+
+## Core Concepts
+
+### 1. Micro (The Client)
+
+This is the basic building block. It lets you send messages to an AI and get responses back.
+
+**Think of it like:** A phone call with an AI assistant. You talk, it listens and responds.
+
+```typescript
+import { Micro } from 'micro-ai-ts'
+
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+})
+
+const response = await client.chat('What is the capital of France?')
+console.log(response.completion.content) // "Paris"
+```
+
+### 2. Agent
+
+An agent is an AI that can use tools to accomplish tasks. It's like giving your AI hands to interact with the world.
+
+**Think of it like:** A personal assistant who can not only answer questions but also check the weather, search the web, or send emails.
+
+```typescript
+import { Agent, createTool } from 'micro-ai-ts'
+import { z } from 'zod'
+
+const weatherTool = createTool(
+  'get_weather',
+  'Get current weather for a location',
+  z.object({ city: z.string() }),
+  async ({ city }) => {
+    // Your weather API call here
+    return `The weather in ${city} is sunny, 72°F`
+  }
+)
+
+const agent = Agent.create({
+  name: 'WeatherBot',
+  instructions: 'You help users check the weather',
+  model: 'openai:gpt-4.1-mini',
+  tools: [weatherTool],
+})
+
+const response = await agent.chat("What's the weather in Paris?")
+// The agent will automatically call the weather tool and respond
+```
+
+### 3. Orchestrator
+
+An orchestrator coordinates multiple specialized agents. It's like a manager who delegates tasks to the right team member.
+
+**Think of it like:** A project manager who knows which expert to ask for each type of question.
+
+```typescript
+import { Agent, Orchestrator } from 'micro-ai-ts'
+
+const weatherAgent = Agent.create({
+  name: 'WeatherExpert',
+  instructions: 'You provide weather information',
+  tools: [weatherTool],
+})
+
+const newsAgent = Agent.create({
+  name: 'NewsExpert',
+  instructions: 'You provide latest news',
+  tools: [newsTool],
+})
+
+const orchestrator = Orchestrator.create({
+  name: 'MainAssistant',
+  instructions: 'You coordinate between weather and news experts',
+  handoffs: [weatherAgent, newsAgent],
+})
+```
+
+## Your First LLM Interaction
+
+Let's build a simple chatbot step by step.
+
+### Step 1: Install Micro AI
+
+```bash
+npm install micro-ai-ts
+# or
+pnpm add micro-ai-ts
+# or
+yarn add micro-ai-ts
+```
+
+### Step 2: Get an API Key
+
+You need an API key from an AI provider. The easiest to start with is OpenAI:
+
+1. Go to [platform.openai.com](https://platform.openai.com)
+2. Sign up for an account
+3. Navigate to API Keys section
+4. Create a new API key
+5. Copy it somewhere safe
+
+### Step 3: Set Up Your Environment
+
+Create a `.env` file in your project:
+
+```env
+OPENAI_API_KEY=your-api-key-here
+```
+
+### Step 4: Write Your First Code
+
+Create a file called `my-first-bot.ts`:
+
+```typescript
+import { Micro } from 'micro-ai-ts'
+
+async function main() {
+  // Create a client
+  const client = new Micro({
+    model: 'openai:gpt-4.1-mini',
+    systemPrompt: 'You are a helpful assistant who speaks like a pirate.',
+  })
+
+  // Send a message
+  const response = await client.chat('Tell me a joke')
+
+  // Print the response
+  console.log(response.completion.content)
+
+  // Continue the conversation
+  const response2 = await client.chat('Tell me another one')
+  console.log(response2.completion.content)
+}
+
+main()
+```
+
+### Step 5: Run It
+
+```bash
+npx tsx my-first-bot.ts
+```
+
+You should see the AI respond with pirate-themed jokes!
+
+## Understanding Conversations
+
+Micro automatically remembers your conversation history. Each time you call `chat()`, it includes previous messages.
+
+```typescript
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+})
+
+await client.chat('My name is Alice')
+await client.chat('What is my name?') // AI remembers: "Your name is Alice"
+
+// See the full conversation
+console.log(client.getMessages())
+```
+
+### Managing Conversation History
+
+```typescript
+// Limit to last 10 messages (useful for long conversations)
+client.limitMessages(10)
+
+// Clear all messages and start fresh
+client.flushAllMessages()
+
+// Manually set messages
+client.setMessages([
+  { role: 'user', content: 'Hello' },
+  { role: 'assistant', content: 'Hi there!' },
+])
+```
+
+## Using Template Variables
+
+You can inject dynamic values into your prompts using the `context` option:
+
+```typescript
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  systemPrompt: 'You are {{role}}. Your expertise is {{expertise}}.',
+  context: {
+    role: 'a friendly teacher',
+    expertise: 'explaining complex topics simply',
+  },
+})
+
+// The system prompt becomes:
+// "You are a friendly teacher. Your expertise is explaining complex topics simply."
+```
+
+## Adding Tools to Agents
+
+Tools let your AI perform actions. Here's how to create them:
+
+### Step 1: Define What the Tool Does
+
+```typescript
+import { createTool } from 'micro-ai-ts'
+import { z } from 'zod'
+
+// Create a calculator tool
+const calculatorTool = createTool(
+  'calculate',
+  'Perform mathematical calculations',
+  z.object({
+    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+    a: z.number(),
+    b: z.number(),
+  }),
+  async ({ operation, a, b }) => {
+    switch (operation) {
+      case 'add':
+        return a + b
+      case 'subtract':
+        return a - b
+      case 'multiply':
+        return a * b
+      case 'divide':
+        return a / b
+    }
+  }
+)
+```
+
+### Step 2: Give the Tool to an Agent
+
+```typescript
+const mathAgent = Agent.create({
+  name: 'MathTutor',
+  instructions: 'You help students with math problems',
+  model: 'openai:gpt-4.1-mini',
+  tools: [calculatorTool],
+})
+
+const response = await mathAgent.chat('What is 15 times 23?')
+// The agent will automatically use the calculator tool
+console.log(response.completion.content)
+```
+
+### How Tools Work
+
+1. You ask the agent a question
+2. The AI decides if it needs to use a tool
+3. If yes, it calls the tool with the right parameters
+4. The tool executes and returns a result
+5. The AI uses that result to answer your question
+
+### Real-World Tool Example: Web Search
+
+```typescript
+const searchTool = createTool(
+  'web_search',
+  'Search the internet for information',
+  z.object({
+    query: z.string().describe('The search query'),
+  }),
+  async ({ query }) => {
+    // Call a search API (like Brave, Google, etc.)
+    const results = await fetch(`https://api.search.com?q=${query}`)
+    return await results.json()
+  }
+)
+
+const researchAgent = Agent.create({
+  name: 'Researcher',
+  instructions: 'You help users find information online',
+  tools: [searchTool],
+})
+
+await researchAgent.chat('What are the latest developments in AI?')
+// Agent will search the web and summarize findings
+```
+
+## Multi-Agent Orchestration
+
+Sometimes you need multiple specialized agents working together. Here's how:
+
+### Pattern 1: Simple Handoff
+
+Create specialized agents and let an orchestrator delegate:
+
+```typescript
+// Create specialized agents
+const codeAgent = Agent.create({
+  name: 'CodeExpert',
+  instructions: 'You write and explain code',
+  model: 'openai:gpt-4.1-mini',
+})
+
+const designAgent = Agent.create({
+  name: 'DesignExpert',
+  instructions: 'You help with UI/UX design',
+  model: 'openai:gpt-4.1-mini',
+})
+
+// Create orchestrator
+const orchestrator = Orchestrator.create({
+  name: 'ProjectManager',
+  instructions:
+    'You coordinate between code and design experts. ' +
+    'Delegate coding questions to CodeExpert and design questions to DesignExpert.',
+  model: 'openai:gpt-4.1-mini',
+  handoffs: [codeAgent, designAgent],
+})
+
+// The orchestrator will automatically route questions
+await orchestrator.chat('How do I center a div in CSS?')
+// Routes to CodeExpert
+
+await orchestrator.chat('What colors work well for a tech startup?')
+// Routes to DesignExpert
+```
+
+### Pattern 2: Sequential Workflow
+
+Agents can work in sequence, each building on the previous:
+
+```typescript
+const researchAgent = Agent.create({
+  name: 'Researcher',
+  instructions: 'You gather information on topics',
+  tools: [searchTool],
+})
+
+const writerAgent = Agent.create({
+  name: 'Writer',
+  instructions: 'You write articles based on research',
+})
+
+// First, research
+const research = await researchAgent.chat('Research AI trends in 2025')
+
+// Then, write based on research
+writerAgent.setUserMessage(
+  `Write an article based on this research: ${research.completion.content}`
+)
+const article = await writerAgent.invoke()
+```
+
+### Pattern 3: Collaborative Agents
+
+Multiple agents can contribute to a single conversation:
+
+```typescript
+const orchestrator = Orchestrator.create({
+  name: 'TeamLead',
+  instructions: 'You coordinate a team of experts to solve complex problems',
+  handoffs: [
+    Agent.create({
+      name: 'DataAnalyst',
+      instructions: 'You analyze data and provide insights',
+      tools: [dataAnalysisTool],
+    }),
+    Agent.create({
+      name: 'Strategist',
+      instructions: 'You develop strategies based on data',
+    }),
+    Agent.create({
+      name: 'Implementer',
+      instructions: 'You create action plans',
+    }),
+  ],
+})
+
+await orchestrator.chat(
+  'How can we improve our product based on user feedback?'
+)
+// Orchestrator will coordinate between all three agents
+```
+
+## Using Reasoning Models
+
+Reasoning models are special AI models that can "think through" complex problems step by step. They're great for:
+
+- Math and logic problems
+- Code debugging
+- Complex analysis
+- Strategic planning
+
+### What Makes Them Different?
+
+Regular models respond quickly with their first answer. Reasoning models take time to think, showing their thought process.
+
+### How to Use Them
+
+```typescript
+const reasoningClient = new Micro({
+  model: 'openai:o1-mini', // A reasoning model
+  reasoning: true,
+  reasoning_effort: 'medium', // 'low', 'medium', or 'high'
+})
+
+const response = await reasoningClient.chat(
+  'If a train leaves Station A at 60mph and another leaves Station B ' +
+    '(100 miles away) at 40mph, when do they meet?'
+)
+
+// See the AI's thinking process
+console.log('Thinking:', response.completion.reasoning)
+
+// See the final answer
+console.log('Answer:', response.completion.content)
+```
+
+### Supported Reasoning Models
+
+**OpenAI:**
+
+- `openai:gpt-5-mini` - Fast reasoning
+- `openai:gpt-5` - Advanced reasoning
+- `openai:o1-mini` - Fast reasoning
+- `openai:o1` - Advanced reasoning
+- `openai:o3-mini` - Latest fast reasoning
+
+**Google:**
+
+- `gemini:gemini-2.5-pro` - Advanced reasoning
+- `gemini:gemini-2.5-flash-lite` - Fast reasoning
+
+**DeepSeek:**
+
+- `deepseek:deepseek-r1` - Open-source reasoning
+
+**Alibaba:**
+
+- `ai302:glm-4.5-flash` - Fast reasoning
+- `ai302:glm-4.5` - Advanced reasoning
+- `ai302:glm-4.6` - Advanced reasoning
+
+### Reasoning Effort Levels
+
+```typescript
+// Low effort - faster, less thorough
+reasoning_effort: 'low'
+
+// Medium effort - balanced (default)
+reasoning_effort: 'medium'
+
+// High effort - slower, more thorough
+reasoning_effort: 'high'
+```
+
+### When to Use Reasoning Models
+
+✅ **Good for:**
+
+- Complex math problems
+- Code debugging and optimization
+- Strategic analysis
+- Multi-step reasoning
+- Problems requiring careful thought
+
+❌ **Not ideal for:**
+
+- Simple questions
+- Creative writing
+- Quick responses
+- Casual conversation
+
+## Event Hooks and Monitoring
+
+Event hooks let you monitor what's happening with your AI:
+
+```typescript
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+
+  // Called when a response is received
+  onComplete: (result) => {
+    console.log('Response received:', result.completion.content)
+    console.log('Tokens used:', result.metadata.tokensUsed)
+  },
+
+  // Called when conversation history changes
+  onMessage: (messages) => {
+    console.log('Conversation now has', messages.length, 'messages')
+  },
+
+  // Called when a tool is executed
+  onToolCall: (toolResponse) => {
+    console.log('Tool called:', toolResponse.toolName)
+    console.log('Result:', toolResponse.result)
+  },
+
+  // Called when an error occurs
+  onError: (error) => {
+    console.error('Error:', error.message)
+  },
+})
+```
+
+### Practical Use Cases
+
+**Logging:**
+
+```typescript
+onComplete: (result) => {
+  fs.appendFileSync(
+    'ai-log.txt',
+    `${new Date().toISOString()}: ${result.completion.content}\n`
+  )
+}
+```
+
+**Cost Tracking:**
+
+```typescript
+let totalTokens = 0
+
+onComplete: (result) => {
+  totalTokens += result.metadata.tokensUsed.total
+  console.log(`Total tokens used: ${totalTokens}`)
+}
+```
+
+**Debugging:**
+
+```typescript
+onRequest: (request) => {
+  console.log('Sending request:', JSON.stringify(request, null, 2));
+},
+
+onResponseData: (response) => {
+  console.log('Raw response:', JSON.stringify(response, null, 2));
+}
+```
+
+## Working with Images (Vision)
+
+Some models can understand images. Here's how to use them:
+
+```typescript
+import { Micro } from 'micro-ai-ts'
+import fs from 'fs'
+
+// Read image and convert to base64
+const imageBuffer = fs.readFileSync('./photo.jpg')
+const base64Image = imageBuffer.toString('base64')
+const bufferString = `data:image/jpeg;base64,${base64Image}`
+
+const client = new Micro({
+  model: 'openai:gpt-4o', // Vision-capable model
+})
+
+const response = await client.chat(
+  'What do you see in this image?',
+  bufferString
+)
+
+console.log(response.completion.content)
+```
+
+## Troubleshooting
+
+### Problem: "API key not found"
+
+**Solution:** Make sure you've set your API key in the environment:
+
+```typescript
+// Option 1: .env file
+OPENAI_API_KEY = your - key - here
+
+// Option 2: Set in code (not recommended for production)
+process.env.OPENAI_API_KEY = 'your-key-here'
+
+// Option 3: Pass directly to provider
+const client = new Micro({
+  provider: {
+    apiKey: 'your-key-here',
+    baseURL: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini',
+  },
+})
+```
+
+### Problem: "Request timeout"
+
+**Solution:** Increase the timeout or check your network:
+
+```typescript
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  timeout: 60000, // 60 seconds (default is 30)
+})
+```
+
+### Problem: "Tool not being called"
+
+**Checklist:**
+
+1. Is the tool description clear?
+2. Is the schema correct?
+3. Is the model capable of tool calling? (gpt-3.5-turbo and above)
+4. Try being more explicit in your prompt
+
+```typescript
+// Instead of:
+await agent.chat("What's the weather?")
+
+// Try:
+await agent.chat('Use the weather tool to check the weather in Paris')
+```
+
+### Problem: "Response is too long/short"
+
+**Solution:** Adjust `maxTokens`:
+
+```typescript
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  maxTokens: 500, // Limit response length
+})
+```
+
+### Problem: "Responses are too random/creative"
+
+**Solution:** Lower the temperature:
+
+```typescript
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  temperature: 0.3, // Lower = more focused (0-2, default is 1)
+})
+```
+
+### Problem: "Agent keeps calling wrong tool"
+
+**Solution:** Improve tool descriptions and instructions:
+
+```typescript
+const tool = createTool(
+  'search_database',
+  // Bad: 'Search'
+  // Good: 'Search the product database for items matching a query. Use this when users ask about products, inventory, or availability.',
+  schema,
+  execute
+)
+
+const agent = Agent.create({
+  name: 'ShopAssistant',
+  // Bad: 'You help users'
+  // Good: 'You help users find products. When they ask about products, use the search_database tool. When they ask about orders, use the check_order tool.',
+  instructions: '...',
+})
+```
+
+### Problem: "Out of memory with long conversations"
+
+**Solution:** Limit message history:
+
+```typescript
+// Keep only last 20 messages
+client.limitMessages(20)
+
+// Or manually manage messages
+const messages = client.getMessages()
+const recentMessages = messages.slice(-10) // Last 10 messages
+client.setMessages(recentMessages)
+```
+
+### Problem: "Rate limit errors"
+
+**Solution:** Add retry logic or slow down requests:
+
+```typescript
+async function chatWithRetry(client, prompt, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await client.chat(prompt)
+    } catch (error) {
+      if (error.response?.status === 429 && i < maxRetries - 1) {
+        // Wait before retrying (exponential backoff)
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * Math.pow(2, i))
+        )
+        continue
+      }
+      throw error
+    }
+  }
+}
+```
+
+## Best Practices
+
+### 1. Write Clear Instructions
+
+```typescript
+// ❌ Bad
+instructions: 'Help users'
+
+// ✅ Good
+instructions: 'You are a customer support agent for an e-commerce store. ' +
+  'Be friendly and professional. Always verify order numbers before ' +
+  'providing order information. If you cannot help, escalate to a human agent.'
+```
+
+### 2. Handle Errors Gracefully
+
+```typescript
+try {
+  const response = await client.chat(userInput)
+
+  // Errors from providers will be here (like "Model name does not exist")
+  if (response.error) {
+    console.error('Failed to get AI response:', response.error.message)
+    return
+  }
+
+  console.log(response.completion.content)
+} catch (error) {
+  // Error like no API Keys etc will be here
+  console.error('Failed to get AI response:', error.message)
+  // Show user-friendly error message
+  console.log("Sorry, I'm having trouble right now. Please try again.")
+}
+```
+
+### 3. Monitor Token Usage
+
+```typescript
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  onComplete: (result) => {
+    const tokens = result.metadata.tokensUsed.total
+    if (tokens > 3000) {
+      console.warn(
+        'High token usage detected. Consider limiting conversation history.'
+      )
+    }
+  },
+})
+```
+
+## Next Steps
+
+Now that you understand the basics, try:
+
+1. **Build a simple chatbot** - Start with basic conversation
+2. **Add one tool** - Give your AI a simple capability
+3. **Create a specialized agent** - Build an agent for a specific task
+4. **Experiment with reasoning models** - Try solving complex problems
+5. **Build a multi-agent system** - Coordinate multiple agents
+
+Check out the [examples folder](../examples) for complete, runnable code examples.
+
+## Getting Help
+
+- **GitHub Issues**: Report bugs or request features
+- **Examples**: See working code in the `examples/` folder
+- **README**: Quick reference for API methods
+
+Happy building! 🚀

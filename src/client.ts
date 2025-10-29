@@ -1,0 +1,546 @@
+import 'dotenv/config'
+import axios, { AxiosInstance } from 'axios'
+import type {
+  MicroOptions,
+  Message,
+  Provider,
+  ReasoningLevel,
+  Metadata,
+  Response,
+} from './types'
+import { Providers } from './providers'
+import {
+  randomId,
+  parseTemplate,
+  stripModelName,
+  stripProviderName,
+  isBufferString,
+  hasTag,
+  stripTag,
+  extractInnerTag,
+  takeRight,
+} from './utils/utils'
+
+const Defaults = {
+  apiKey: process.env.OPENAI_API_KEY || '',
+  baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+  providerName: 'openai',
+  model: 'gpt-4o-mini',
+  temperature: 0,
+  defaultEndpointCompletionSuffix: '/chat/completions',
+}
+
+export class Micro {
+  private axiosInstance: AxiosInstance
+  private model: string
+  private systemPrompt: string
+  private messages: Message[]
+  private context: Record<string, any>
+  private prompt: string
+  private maxTokens?: number
+  private temperature?: number
+  private tools?: MicroOptions['tools']
+  private tool_choice?: MicroOptions['tool_choice']
+  private streaming: boolean
+  private parsedSystemPrompt: string
+  private defaultProvider: Omit<Provider, 'model'>
+  private modelName: string
+  private providerName: string
+  private identifier: string
+  private timeout?: number
+  private reasoning_effort?: ReasoningLevel
+
+  private onComplete?: MicroOptions['onComplete']
+  private onMessage?: MicroOptions['onMessage']
+  private onRequest?: MicroOptions['onRequest']
+  private onResponseData?: MicroOptions['onResponseData']
+  private onError?: MicroOptions['onError']
+  private onToolCall?: MicroOptions['onToolCall']
+
+  private debug: boolean
+
+  private reasoning: boolean
+  private isReasoningModel: boolean
+  private isGemini25Reasoning: boolean
+  private isOpenAIReasoning: boolean
+  private isOpenAI5: boolean
+  private isGLMReasoning: boolean
+  private isQWQ: boolean
+  private isDeepseekReasoning: boolean
+  private isQwen3: boolean
+
+  constructor(options: MicroOptions = {}) {
+    this.identifier = randomId()
+    this.timeout = options?.timeout
+
+    this.modelName = stripModelName(options?.model || '') || Defaults.model
+    this.providerName =
+      stripProviderName(options?.model || '') || Defaults.providerName
+
+    let providerConfig: Provider | undefined
+    if (this.providerName) {
+      const providerFn = Providers[this.providerName as keyof typeof Providers]
+      if (providerFn) {
+        providerConfig = providerFn(this.modelName)
+      }
+    }
+
+    this.defaultProvider = {
+      baseURL:
+        providerConfig?.baseURL ??
+        options?.provider?.baseURL ??
+        Defaults.baseURL,
+      apiKey:
+        providerConfig?.apiKey ?? options?.provider?.apiKey ?? Defaults.apiKey,
+      ...(options?.provider?.headers && {
+        headers: options.provider.headers,
+      }),
+    }
+
+    if (!this.defaultProvider.apiKey) {
+      throw new Error('API Key is required')
+    }
+
+    this.axiosInstance = axios.create({
+      baseURL: this.defaultProvider.baseURL,
+      headers: {
+        Authorization: `Bearer ${this.defaultProvider.apiKey}`,
+        'Content-Type': 'application/json',
+        ...this.defaultProvider.headers,
+      },
+      ...(this.timeout && {
+        timeout: this.timeout,
+      }),
+    })
+
+    this.model = this.modelName
+    this.systemPrompt = options?.systemPrompt || ''
+    this.prompt = options?.prompt || ''
+
+    this.context = options.context ?? {}
+    this.parsedSystemPrompt = this.systemPrompt
+      ? parseTemplate(this.systemPrompt, this.context)
+      : ''
+    this.maxTokens = options.maxTokens
+    this.temperature =
+      options.temperature !== undefined
+        ? options.temperature
+        : Defaults.temperature
+    this.tools = options.tools
+    this.tool_choice = options.tool_choice
+
+    this.debug = options?.debug || false
+    this.streaming = options?.streaming || false
+
+    this.reasoning = options?.reasoning ?? true
+    this.reasoning_effort = options.reasoning_effort ?? 'medium'
+
+    this.isOpenAI5 = this.model?.toLowerCase()?.includes('gpt-5')
+    this.isOpenAIReasoning =
+      this.model?.toLowerCase()?.includes('o1') ||
+      this.model?.toLowerCase()?.includes('o3') ||
+      this.model?.toLowerCase()?.includes('o4') ||
+      this.isOpenAI5
+
+    this.isGemini25Reasoning = this.model?.toLowerCase()?.includes('gemini-2.5')
+
+    this.isGLMReasoning = this.model?.toLowerCase()?.includes('glm-4.')
+    this.isQWQ = this.model?.toLowerCase()?.includes('qwq')
+    this.isDeepseekReasoning =
+      this.model?.toLowerCase()?.includes('deepseek-reasoner') ||
+      this.model?.toLowerCase()?.includes('deepseek-r1')
+    this.isQwen3 = this.model?.toLowerCase()?.includes('qwen3')
+
+    this.isReasoningModel =
+      this.isGemini25Reasoning ||
+      this.isOpenAIReasoning ||
+      this.isGLMReasoning ||
+      this.isQWQ ||
+      this.isDeepseekReasoning ||
+      this.isQwen3
+
+    this.onComplete = options.onComplete || undefined
+    this.onMessage = options.onMessage || undefined
+    this.onRequest = options.onRequest || undefined
+    this.onResponseData = options.onResponseData || undefined
+    this.onError = options.onError || undefined
+    this.onToolCall = options.onToolCall || undefined
+
+    this.messages = options?.messages ?? []
+    this.setSystemPrompt(this.parsedSystemPrompt)
+
+    if (this.debug) {
+      console.log('\n=============================================')
+      console.log('Micro INFO:')
+      console.log('=============================================')
+      console.log('IDENTIFIER:      ', this.identifier)
+      console.log('MODEL NAME:      ', this.modelName)
+      console.log('PROVIDER NAME:   ', this.providerName)
+      console.log('DEFAULT PROVIDER ', this.defaultProvider)
+      console.log('=============================================\n')
+    }
+  }
+
+  public getMetadata(): Metadata {
+    return {
+      id: this.identifier,
+      prompt: this.prompt,
+      providerName: this.providerName,
+      model: this.modelName,
+      timing: {
+        latencyMs: 0,
+        latencySeconds: 0,
+      },
+      timestamp: new Date().toISOString(),
+      context: this.context,
+      ...(this.isReasoningModel && {
+        isReasoningEnabled: this.reasoning,
+        isReasoningModel: this.isReasoningModel,
+        reasoning_effort: this.reasoning_effort,
+      }),
+    }
+  }
+
+  public getSystemPrompt(): string {
+    return this.parsedSystemPrompt
+  }
+
+  public setSystemPrompt(prompt: string): void {
+    if (!prompt) return
+    this.parsedSystemPrompt = parseTemplate(prompt, this.context)
+    if (this.parsedSystemPrompt && !this.getSystemMessage().length) {
+      this.messages.unshift({
+        role: 'system',
+        content: this.parsedSystemPrompt,
+      })
+    }
+  }
+
+  private getSystemMessage(): Message[] {
+    return this.messages.filter((msg) => msg.role === 'system')
+  }
+
+  private getNonSystemMessages(): Message[] {
+    return this.messages.filter((msg) => msg.role !== 'system')
+  }
+
+  public flushAllMessages(): void {
+    this.messages = []
+  }
+
+  public limitMessages(limit: number = 5): Message[] {
+    const systemPromptMessage = this.getSystemMessage()
+    const restOfMessages = this.getNonSystemMessages()
+    const limitMessages = takeRight(restOfMessages, limit)
+    const limitedHistory = [...systemPromptMessage, ...limitMessages]
+    this.messages = limitedHistory
+    return this.messages
+  }
+
+  public getMessages(): Message[] {
+    return this.messages
+  }
+
+  public setMessages(messages: Message[]): void {
+    this.messages = messages
+  }
+
+  public setUserMessage(prompt: string, bufferString?: string): void {
+    const parsedPrompt = parseTemplate(prompt, this.context)
+    this.prompt = parsedPrompt
+
+    if (bufferString && isBufferString(bufferString)) {
+      this.messages.push({
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: parsedPrompt,
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: bufferString,
+            },
+          },
+        ],
+      })
+    } else {
+      this.messages.push({
+        role: 'user',
+        content: parsedPrompt,
+      })
+    }
+
+    if (this.onMessage) {
+      this.onMessage(this.messages)
+    }
+  }
+
+  public setAssistantMessage(prompt: string): this {
+    const parsedPrompt = parseTemplate(prompt, this.context)
+
+    this.messages.push({
+      role: 'assistant',
+      content: parsedPrompt,
+    })
+
+    if (this.onMessage) {
+      this.onMessage(this.messages)
+    }
+
+    return this
+  }
+
+  private async makeRequest(): Promise<any> {
+    const requestBody: any = {
+      model: this.model,
+      messages: this.messages,
+      stream: this.streaming,
+    }
+
+    if (this.temperature) {
+      requestBody.temperature = this.temperature
+    }
+
+    if (this.maxTokens) {
+      requestBody.max_tokens = this.maxTokens
+    }
+
+    if (this.tools && this.tools.length > 0) {
+      requestBody.tools = this.tools.map((tool) => tool.schema)
+      if (this.tool_choice) {
+        requestBody.tool_choice = this.tool_choice
+      }
+    }
+
+    if (this.reasoning && this.isReasoningModel) {
+      if (this.isOpenAIReasoning) {
+        requestBody.reasoning_effort = this.reasoning_effort
+        if (this.maxTokens) {
+          requestBody.max_completion_tokens = this.maxTokens
+          delete requestBody.max_tokens
+        }
+      } else if (this.isGemini25Reasoning) {
+        const thinkingBudgetMap: Record<ReasoningLevel, number> = {
+          minimal: 2048,
+          low: 4096,
+          medium: 8192,
+          high: 16384,
+        }
+        requestBody.extra_body = {
+          google: {
+            thinking_config: {
+              thinking_budget:
+                thinkingBudgetMap[this.reasoning_effort || 'medium'],
+              include_thoughts: true,
+            },
+          },
+        }
+      } else if (this.isGLMReasoning) {
+        requestBody.thinking = {
+          type: 'enabled',
+        }
+      }
+    }
+
+    if (this.onRequest) {
+      this.onRequest(requestBody)
+    }
+
+    const response = await this.axiosInstance.post(
+      Defaults.defaultEndpointCompletionSuffix,
+      requestBody
+    )
+
+    if (this.onResponseData) {
+      this.onResponseData(response.data)
+    }
+
+    return response.data
+  }
+
+  private async executeTool(
+    toolName: string,
+    toolArguments: string
+  ): Promise<any> {
+    const tool = this.tools?.find((t) => t.schema.function.name === toolName)
+
+    if (!tool) {
+      const errorMessage = `Tool "${toolName}" not found`
+      if (this.onToolCall) {
+        this.onToolCall({
+          toolName,
+          arguments: toolArguments,
+          result: null,
+          error: errorMessage,
+        })
+      }
+      return errorMessage
+    }
+
+    try {
+      const parsedArgs = JSON.parse(toolArguments)
+      const result = await tool.execute(parsedArgs)
+
+      if (this.onToolCall) {
+        this.onToolCall({
+          toolName,
+          arguments: parsedArgs,
+          result,
+        })
+      }
+
+      return result
+    } catch (error: any) {
+      const errorMessage = `Error executing tool "${toolName}": ${error.message}`
+      if (this.onToolCall) {
+        this.onToolCall({
+          toolName,
+          arguments: toolArguments,
+          result: null,
+          error: errorMessage,
+        })
+      }
+      return errorMessage
+    }
+  }
+
+  private async handleToolCalls(toolCalls: any[]): Promise<void> {
+    for (const toolCall of toolCalls) {
+      const toolName = toolCall.function.name
+      const toolArguments = toolCall.function.arguments
+
+      const result = await this.executeTool(toolName, toolArguments)
+
+      this.messages.push({
+        role: 'tool',
+        tool_call_id: toolCall.id,
+        name: toolName,
+        content: typeof result === 'string' ? result : JSON.stringify(result),
+      })
+    }
+
+    if (this.onMessage) {
+      this.onMessage(this.messages)
+    }
+  }
+
+  public async invoke(): Promise<Response> {
+    const startTime = Date.now()
+
+    try {
+      const responseData = await this.makeRequest()
+
+      const choice = responseData.choices?.[0]
+      const message = choice?.message
+
+      if (message) {
+        this.messages.push(message)
+
+        if (this.onMessage) {
+          this.onMessage(this.messages)
+        }
+      }
+
+      if (message?.tool_calls && message.tool_calls.length > 0) {
+        await this.handleToolCalls(message.tool_calls)
+        return this.invoke()
+      }
+
+      const endTime = Date.now()
+      const latencyMs = endTime - startTime
+
+      let reasoning = ''
+      let content = message?.content || ''
+      let hasThoughts = false
+
+      if (this.reasoning && this.isReasoningModel && content) {
+        if (hasTag(content, 'thinking')) {
+          reasoning = extractInnerTag(content, 'thinking')
+          content = stripTag(content, 'thinking')
+          hasThoughts = true
+        } else if (hasTag(content, 'think')) {
+          reasoning = extractInnerTag(content, 'think')
+          content = stripTag(content, 'think')
+          hasThoughts = true
+        }
+      }
+
+      const response: Response = {
+        metadata: {
+          id: this.identifier,
+          prompt: this.prompt,
+          providerName: this.providerName,
+          model: this.modelName,
+          tokensUsed: responseData.usage,
+          timing: {
+            latencyMs,
+            latencySeconds: latencyMs / 1000,
+          },
+          timestamp: new Date().toISOString(),
+          context: this.context,
+          ...(this.isReasoningModel && {
+            isReasoningEnabled: this.reasoning,
+            isReasoningModel: this.isReasoningModel,
+            reasoning_effort: this.reasoning_effort,
+            hasThoughts,
+          }),
+        },
+        completion: {
+          role: message?.role || 'assistant',
+          content: content.trim(),
+          reasoning: reasoning.trim(),
+          original: message?.content || '',
+        },
+      }
+
+      if (this.onComplete) {
+        this.onComplete(response, this.messages)
+      }
+
+      return response
+    } catch (error: any) {
+      const endTime = Date.now()
+      const latencyMs = endTime - startTime
+
+      const errorResponse: Response = {
+        metadata: {
+          id: this.identifier,
+          prompt: this.prompt,
+          providerName: this.providerName,
+          model: this.modelName,
+          timing: {
+            latencyMs,
+            latencySeconds: latencyMs / 1000,
+          },
+          timestamp: new Date().toISOString(),
+          context: this.context,
+        },
+        completion: {
+          role: 'assistant',
+          content: '',
+          original: '',
+        },
+        error: {
+          type: error.code === 'ECONNABORTED' ? 'timeout' : 'api_error',
+          message: error.message,
+          status: error.response?.status,
+          code: error.code,
+          details: error.response?.data,
+        },
+      }
+
+      if (this.onError) {
+        this.onError(errorResponse.error)
+      }
+
+      return errorResponse
+    }
+  }
+
+  public async chat(prompt: string, bufferString?: string): Promise<Response> {
+    this.setUserMessage(prompt, bufferString)
+    return this.invoke()
+  }
+}
