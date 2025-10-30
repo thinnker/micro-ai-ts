@@ -25,6 +25,11 @@ export default [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        fetch: 'readonly',
+        AbortController: 'readonly',
+        AbortSignal: 'readonly',
+        RequestInit: 'readonly',
+        global: 'readonly',
       },
     },
     plugins: {

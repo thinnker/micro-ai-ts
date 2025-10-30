@@ -139,7 +139,8 @@ interface MicroOptions {
 }
 
 declare class Micro {
-    private axiosInstance;
+    private baseURL;
+    private headers;
     private model;
     private systemPrompt;
     private messages;
@@ -275,6 +276,46 @@ declare const Providers: {
     grok: (model?: string) => Provider;
 };
 
+type HttpMethod = 'get' | 'GET' | 'delete' | 'DELETE' | 'head' | 'HEAD' | 'options' | 'OPTIONS' | 'post' | 'POST' | 'put' | 'PUT' | 'patch' | 'PATCH';
+interface HttpClientOptions {
+    baseURL: string;
+    endpoint: string;
+    headers: Record<string, string>;
+    body?: Record<string, any>;
+    timeout?: number;
+    method?: HttpMethod;
+}
+interface HttpError extends Error {
+    response?: {
+        status: number;
+        data: any;
+    };
+    code?: string;
+}
+declare function httpClient<T = any>(options: HttpClientOptions): Promise<T>;
+declare function get<T = any>(options: Omit<HttpClientOptions, 'body' | 'method'>): Promise<T>;
+declare function post<T = any>(options: HttpClientOptions): Promise<T>;
+declare function put<T = any>(options: HttpClientOptions): Promise<T>;
+declare function patch<T = any>(options: HttpClientOptions): Promise<T>;
+declare function del<T = any>(options: Omit<HttpClientOptions, 'body' | 'method'>): Promise<T>;
+declare function head<T = any>(options: Omit<HttpClientOptions, 'body' | 'method'>): Promise<T>;
+declare function options<T = any>(options: Omit<HttpClientOptions, 'body' | 'method'>): Promise<T>;
+
+type http_HttpClientOptions = HttpClientOptions;
+type http_HttpError = HttpError;
+type http_HttpMethod = HttpMethod;
+declare const http_del: typeof del;
+declare const http_get: typeof get;
+declare const http_head: typeof head;
+declare const http_httpClient: typeof httpClient;
+declare const http_options: typeof options;
+declare const http_patch: typeof patch;
+declare const http_post: typeof post;
+declare const http_put: typeof put;
+declare namespace http {
+  export { type http_HttpClientOptions as HttpClientOptions, type http_HttpError as HttpError, type http_HttpMethod as HttpMethod, http_del as del, http_get as get, http_head as head, http_httpClient as httpClient, http_options as options, http_patch as patch, http_post as post, http_put as put };
+}
+
 /**
  * Generate a random ID using crypto.randomUUID
  */
@@ -293,4 +334,4 @@ declare function parseTemplate(template: string, context?: Record<string, any>):
  */
 declare function slugify(text: string): string;
 
-export { Agent, type AgentOptions, type ContentOptions, type ContentPart, type ErrorPayload, type Message, type Metadata, Micro, type MicroOptions, type OnCompleteResponse, type OnErrorResponse, type OnMessageResponse, type OnRequestData, type OnResponseData, type OnToolCall, Orchestrator, type Provider, Providers, type ReasoningLevel, type ReasoningOptions, type Response, type TokenUsage, type Tool, type ToolCall, type ToolChoice, type ToolResponse, createProvider, createTool, parseTemplate, randomId, slugify };
+export { Agent, type AgentOptions, type ContentOptions, type ContentPart, type ErrorPayload, type HttpClientOptions, type HttpError, type HttpMethod, type Message, type Metadata, Micro, type MicroOptions, type OnCompleteResponse, type OnErrorResponse, type OnMessageResponse, type OnRequestData, type OnResponseData, type OnToolCall, Orchestrator, type Provider, Providers, type ReasoningLevel, type ReasoningOptions, type Response, type TokenUsage, type Tool, type ToolCall, type ToolChoice, type ToolResponse, createProvider, createTool, del, get, head, http, httpClient, options, parseTemplate, patch, post, put, randomId, slugify };

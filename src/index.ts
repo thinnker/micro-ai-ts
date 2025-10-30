@@ -9,6 +9,10 @@ export { z } from 'zod'
 // Provider exports
 export { createProvider, Providers } from './providers'
 
+// HTTP client exports
+export * as http from './http'
+export { httpClient, get, post, put, patch, del, head, options } from './http'
+
 // Utility function exports
 export { parseTemplate, slugify, randomId } from './utils/utils'
 
@@ -38,3 +42,4 @@ export type {
 } from './types'
 
 export type { AgentOptions } from './agent'
+export type { HttpClientOptions, HttpError, HttpMethod } from './http'

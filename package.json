@@ -1,6 +1,6 @@
 {
   "name": "micro-ai-ts",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "A lightweight, beginner-friendly TypeScript library for building LLM-powered applications",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -43,7 +43,6 @@
   "author": "https://github.com/thinnker",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.7.9",
     "dedent": "^1.5.3",
     "dotenv": "^17.2.3",
     "hyperid": "^3.3.0",

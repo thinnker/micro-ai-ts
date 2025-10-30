@@ -1,5 +1,4 @@
 import 'dotenv/config'
-import axios, { AxiosInstance } from 'axios'
 import type {
   MicroOptions,
   Message,
@@ -9,6 +8,7 @@ import type {
   Response,
 } from './types'
 import { Providers } from './providers'
+import { httpClient } from './http'
 import {
   randomId,
   parseTemplate,
@@ -32,7 +32,8 @@ const Defaults = {
 }
 
 export class Micro {
-  private axiosInstance: AxiosInstance
+  private baseURL: string
+  private headers: Record<string, string>
   private model: string
   private systemPrompt: string
   private messages: Message[]
@@ -102,17 +103,12 @@ export class Micro {
       throw new Error('API Key is required')
     }
 
-    this.axiosInstance = axios.create({
-      baseURL: this.defaultProvider.baseURL,
-      headers: {
-        Authorization: `Bearer ${this.defaultProvider.apiKey}`,
-        'Content-Type': 'application/json',
-        ...this.defaultProvider.headers,
-      },
-      ...(this.timeout && {
-        timeout: this.timeout,
-      }),
-    })
+    this.baseURL = this.defaultProvider.baseURL
+    this.headers = {
+      Authorization: `Bearer ${this.defaultProvider.apiKey}`,
+      'Content-Type': 'application/json',
+      ...this.defaultProvider.headers,
+    }
 
     this.model = this.modelName
     this.systemPrompt = options?.systemPrompt || ''
@@ -349,16 +345,20 @@ export class Micro {
       this.onRequest(requestBody)
     }
 
-    const response = await this.axiosInstance.post(
-      Defaults.defaultEndpointCompletionSuffix,
-      requestBody
-    )
+    const data = await httpClient({
+      baseURL: this.baseURL,
+      endpoint: Defaults.defaultEndpointCompletionSuffix,
+      headers: this.headers,
+      body: requestBody,
+      timeout: this.timeout,
+      method: 'POST',
+    })
 
     if (this.onResponseData) {
-      this.onResponseData(response.data)
+      this.onResponseData(data)
     }
 
-    return response.data
+    return data
   }
 
   private async executeTool(
