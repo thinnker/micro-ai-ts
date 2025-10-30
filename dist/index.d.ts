@@ -33,9 +33,10 @@ type ContentPart = {
     };
 };
 type ContentOptions = string | null | ContentPart[];
+type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 interface Message {
     id?: string;
-    role: 'system' | 'user' | 'assistant' | 'tool';
+    role: MessageRole;
     content: ContentOptions;
     name?: string;
     tool_calls?: ToolCall[];
@@ -82,8 +83,9 @@ type Metadata = {
     reasoning_effort?: ReasoningLevel;
     hasThoughts?: boolean;
 };
+type ErrorPayloadType = 'timeout' | 'api_error';
 type ErrorPayload = {
-    type: 'timeout' | 'api_error';
+    type: ErrorPayloadType;
     message: string;
     status?: number;
     code?: string;
@@ -98,12 +100,13 @@ type Response = {
         original: string;
     };
     error?: ErrorPayload;
+    fullResponse?: Record<string, unknown>;
 };
 type ToolResponse = {
     toolName: string;
-    arguments: any;
-    result: any;
-    error?: any;
+    arguments: string;
+    result: string | null;
+    error?: string;
 };
 type OnCompleteResponse = (result: Response, messages?: Message[]) => void;
 type OnMessageResponse = (messages: Message[]) => void;
@@ -189,21 +192,25 @@ declare class Micro {
     chat(prompt: string, bufferString?: string): Promise<Response>;
 }
 
-interface AgentOptions extends Omit<MicroOptions, 'prompt'> {
+type AgentOptions = Omit<MicroOptions, 'prompt'> & {
     name: string;
-    instructions: string;
-    handoffs?: Agent[];
+    background: string;
+    goal?: string;
     position?: string;
-}
+    additionalInstructions?: string;
+    handoffs?: Agent[];
+};
 declare class Agent {
     private client;
     name: string;
-    instructions: string;
+    background: string;
+    goal: string | undefined;
+    position: string | undefined;
     handoffs?: Agent[];
     tools?: Tool[];
-    position: string | undefined;
     model: string | undefined;
     constructor(options: AgentOptions);
+    private buildSystemPrompt;
     private handoffAgentToTools;
     private toolsToStringList;
     private handoffAgentToStringList;

@@ -1,4 +1,5 @@
 import hyperid from 'hyperid'
+import { Provider } from '../types'
 
 /**
  * Generate a random ID using crypto.randomUUID
@@ -146,4 +147,37 @@ export function microlog(label: string, ...args: any[]): void {
   console.log('='.repeat(50))
   console.log(...args)
   console.log('='.repeat(50) + '\n')
+}
+
+/**
+ * Sanitize a provider object by masking sensitive API key information (in logs or CLI)
+ * @param provider - Provider object without model property
+ * @returns Sanitized provider object with masked API key
+ */
+export function sanitizeProvider(provider: Omit<Provider, 'model'>): any {
+  if (!provider) return provider
+
+  const sanitized = { ...provider }
+
+  if (sanitized.apiKey && typeof sanitized.apiKey === 'string') {
+    const key = sanitized.apiKey
+    // Show first 10 chars, mask the rest except last 8 chars
+    const firstCharacters = 10
+    const lastCharacters = 8
+    const total = firstCharacters + lastCharacters
+
+    if (key.length > total) {
+      const prefix = key.substring(0, firstCharacters)
+      const suffix = key.substring(key.length - lastCharacters)
+      const maskedLength = key.length - total
+      sanitized.apiKey = `${prefix}${'•'.repeat(maskedLength)}${suffix}`
+    } else if (key.length > firstCharacters) {
+      const prefix = key.substring(0, firstCharacters)
+      sanitized.apiKey = `${prefix}${'•'.repeat(key.length - firstCharacters)}`
+    } else {
+      sanitized.apiKey = '•'.repeat(key.length)
+    }
+  }
+
+  return sanitized
 }

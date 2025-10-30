@@ -19,6 +19,7 @@ import {
   stripTag,
   extractInnerTag,
   takeRight,
+  sanitizeProvider,
 } from './utils/utils'
 
 const Defaults = {
@@ -176,7 +177,7 @@ export class Micro {
       console.log('IDENTIFIER:      ', this.identifier)
       console.log('MODEL NAME:      ', this.modelName)
       console.log('PROVIDER NAME:   ', this.providerName)
-      console.log('DEFAULT PROVIDER ', this.defaultProvider)
+      console.log('DEFAULT PROVIDER ', sanitizeProvider(this.defaultProvider))
       console.log('=============================================\n')
     }
   }
