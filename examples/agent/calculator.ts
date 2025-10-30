@@ -41,7 +41,7 @@ async function main() {
 
   const agent = Agent.create({
     name: 'Math Assistant',
-    instructions:
+    background:
       'You are a helpful math assistant. Use the calculator tool to perform calculations and explain the results clearly.',
     model: 'openai:gpt-4.1-nano',
     tools: [calculatorTool],

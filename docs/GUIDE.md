@@ -56,7 +56,7 @@ const weatherTool = createTool(
 
 const agent = Agent.create({
   name: 'WeatherBot',
-  instructions: 'You help users check the weather',
+  background: 'You help users check the weather',
   model: 'openai:gpt-4.1-mini',
   tools: [weatherTool],
 })
@@ -75,20 +75,20 @@ An orchestrator coordinates multiple specialized agents. It's like a manager who
 import { Agent, Orchestrator } from 'micro-ai-ts'
 
 const weatherAgent = Agent.create({
-  name: 'WeatherExpert',
-  instructions: 'You provide weather information',
+  name: 'Weather Expert',
+  background: 'You provide weather information',
   tools: [weatherTool],
 })
 
 const newsAgent = Agent.create({
-  name: 'NewsExpert',
-  instructions: 'You provide latest news',
+  name: 'News Expert',
+  background: 'You provide latest news',
   tools: [newsTool],
 })
 
 const orchestrator = Orchestrator.create({
-  name: 'MainAssistant',
-  instructions: 'You coordinate between weather and news experts',
+  name: 'Main Assistant',
+  background: 'You coordinate between weather and news experts',
   handoffs: [weatherAgent, newsAgent],
 })
 ```
@@ -250,7 +250,7 @@ const calculatorTool = createTool(
 ```typescript
 const mathAgent = Agent.create({
   name: 'MathTutor',
-  instructions: 'You help students with math problems',
+  background: 'You help students with math problems',
   model: 'openai:gpt-4.1-mini',
   tools: [calculatorTool],
 })
@@ -286,7 +286,7 @@ const searchTool = createTool(
 
 const researchAgent = Agent.create({
   name: 'Researcher',
-  instructions: 'You help users find information online',
+  background: 'You help users find information online',
   tools: [searchTool],
 })
 
@@ -306,20 +306,20 @@ Create specialized agents and let an orchestrator delegate:
 // Create specialized agents
 const codeAgent = Agent.create({
   name: 'CodeExpert',
-  instructions: 'You write and explain code',
+  background: 'You write and explain code',
   model: 'openai:gpt-4.1-mini',
 })
 
 const designAgent = Agent.create({
   name: 'DesignExpert',
-  instructions: 'You help with UI/UX design',
+  background: 'You help with UI/UX design',
   model: 'openai:gpt-4.1-mini',
 })
 
 // Create orchestrator
 const orchestrator = Orchestrator.create({
   name: 'ProjectManager',
-  instructions:
+  background:
     'You coordinate between code and design experts. ' +
     'Delegate coding questions to CodeExpert and design questions to DesignExpert.',
   model: 'openai:gpt-4.1-mini',
@@ -341,13 +341,13 @@ Agents can work in sequence, each building on the previous:
 ```typescript
 const researchAgent = Agent.create({
   name: 'Researcher',
-  instructions: 'You gather information on topics',
+  background: 'You gather information on topics',
   tools: [searchTool],
 })
 
 const writerAgent = Agent.create({
   name: 'Writer',
-  instructions: 'You write articles based on research',
+  background: 'You write articles based on research',
 })
 
 // First, research
@@ -367,20 +367,20 @@ Multiple agents can contribute to a single conversation:
 ```typescript
 const orchestrator = Orchestrator.create({
   name: 'TeamLead',
-  instructions: 'You coordinate a team of experts to solve complex problems',
+  background: 'You coordinate a team of experts to solve complex problems',
   handoffs: [
     Agent.create({
       name: 'DataAnalyst',
-      instructions: 'You analyze data and provide insights',
+      background: 'You analyze data and provide insights',
       tools: [dataAnalysisTool],
     }),
     Agent.create({
       name: 'Strategist',
-      instructions: 'You develop strategies based on data',
+      background: 'You develop strategies based on data',
     }),
     Agent.create({
       name: 'Implementer',
-      instructions: 'You create action plans',
+      background: 'You create action plans',
     }),
   ],
 })
@@ -648,7 +648,7 @@ const client = new Micro({
 
 ### Problem: "Agent keeps calling wrong tool"
 
-**Solution:** Improve tool descriptions and instructions:
+**Solution:** Improve tool descriptions and background:
 
 ```typescript
 const tool = createTool(
@@ -663,7 +663,7 @@ const agent = Agent.create({
   name: 'ShopAssistant',
   // Bad: 'You help users'
   // Good: 'You help users find products. When they ask about products, use the search_database tool. When they ask about orders, use the check_order tool.',
-  instructions: '...',
+  background: '...',
 })
 ```
 
@@ -710,10 +710,10 @@ async function chatWithRetry(client, prompt, maxRetries = 3) {
 
 ```typescript
 // ❌ Bad
-instructions: 'Help users'
+background: 'Help users'
 
 // ✅ Good
-instructions: 'You are a customer support agent for an e-commerce store. ' +
+background: 'You are a customer support agent for an e-commerce store. ' +
   'Be friendly and professional. Always verify order numbers before ' +
   'providing order information. If you cannot help, escalate to a human agent.'
 ```

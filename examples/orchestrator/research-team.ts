@@ -65,7 +65,7 @@ const dataAnalysisTool = createTool(
 async function main() {
   const webResearchAgent = Agent.create({
     name: 'Web Research Specialist',
-    instructions:
+    background:
       'You are a web research specialist. Use the web_search tool to find information on topics. Summarize findings clearly and cite sources.',
     model: 'openai:gpt-4.1-mini',
     tools: [webSearchTool],
@@ -74,7 +74,7 @@ async function main() {
 
   const dataAnalystAgent = Agent.create({
     name: 'Data Analyst',
-    instructions:
+    background:
       'You are a data analyst. Use the analyze_data tool to perform statistical analysis. Explain findings in clear, non-technical language.',
     model: 'openai:gpt-4.1-mini',
     tools: [dataAnalysisTool],
@@ -83,7 +83,7 @@ async function main() {
 
   const reportWriterAgent = Agent.create({
     name: 'Report Writer',
-    instructions:
+    background:
       'You are a report writer. Synthesize information from other specialists into clear, well-structured reports. Use professional language and organize information logically.',
     model: 'openai:gpt-4.1-mini',
     temperature: 0.6,
@@ -91,7 +91,7 @@ async function main() {
 
   const orchestrator = Orchestrator.create({
     name: 'Research Team Lead',
-    instructions:
+    background:
       'You are a research team lead coordinating a team of specialists. Delegate research tasks to the Web Research Specialist, data analysis to the Data Analyst, and report writing to the Report Writer. Coordinate their work to produce comprehensive results.',
     model: 'openai:gpt-4.1-mini',
     handoffs: [webResearchAgent, dataAnalystAgent, reportWriterAgent],

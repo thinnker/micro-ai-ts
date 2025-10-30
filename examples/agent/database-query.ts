@@ -41,7 +41,7 @@ async function main() {
 
   const agent = Agent.create({
     name: 'Data Assistant',
-    instructions:
+    background:
       'You are a data assistant that helps users query and understand database information. Use the query_database tool to fetch information.',
     model: 'openai:gpt-4.1-mini',
     tools: [databaseTool],

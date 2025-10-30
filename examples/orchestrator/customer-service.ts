@@ -3,7 +3,7 @@ import { Agent, Orchestrator } from '../../src/index'
 async function main() {
   const techSupportAgent = Agent.create({
     name: 'Technical Support Specialist',
-    instructions:
+    background:
       'You are a technical support specialist. Help users troubleshoot technical issues, provide step-by-step solutions, and explain technical concepts clearly. Focus on software, hardware, and connectivity problems.',
     model: 'openai:gpt-4.1-mini',
     temperature: 0.3,
@@ -11,7 +11,7 @@ async function main() {
 
   const billingAgent = Agent.create({
     name: 'Billing Specialist',
-    instructions:
+    background:
       'You are a billing specialist. Help users with payment issues, subscription management, refunds, and billing inquiries. Be clear about pricing and policies.',
     model: 'openai:gpt-4.1-mini',
     temperature: 0.3,
@@ -19,7 +19,7 @@ async function main() {
 
   const salesAgent = Agent.create({
     name: 'Sales Representative',
-    instructions:
+    background:
       'You are a sales representative. Help users understand product features, pricing plans, and make recommendations based on their needs. Be persuasive but honest.',
     model: 'openai:gpt-4.1-mini',
     temperature: 0.7,
@@ -27,7 +27,7 @@ async function main() {
 
   const orchestrator = Orchestrator.create({
     name: 'Customer Service Manager',
-    instructions:
+    background:
       "You are a customer service manager who routes customer inquiries to the appropriate specialist. Analyze the customer's question and delegate to the right agent: Technical Support for technical issues, Billing for payment/subscription issues, or Sales for product information and purchases. Always provide a brief summary after the specialist responds.",
     model: 'openai:gpt-4.1-mini',
     handoffs: [techSupportAgent, billingAgent, salesAgent],

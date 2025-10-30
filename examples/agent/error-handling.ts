@@ -11,7 +11,7 @@ async function main() {
       b: z.number(),
     }),
     async ({ operation, a, b }) => {
-      let result = 0
+      let result: number
       switch (operation) {
         case 'add':
           result = a + b
@@ -33,7 +33,7 @@ async function main() {
 
   const agent = Agent.create({
     name: 'Calculator Agent',
-    instructions: 'You are a calculator agent. Use the calculator tool.',
+    background: 'You are a calculator agent. Use the calculator tool.',
     model: 'openai:gpt-4.1-mini',
     tools: [calculatorTool],
     temperature: 0,

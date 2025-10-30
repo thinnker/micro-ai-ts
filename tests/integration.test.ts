@@ -108,7 +108,7 @@ describe('Integration Tests', () => {
 
       const agent = new Agent({
         name: 'Multi-Tool Agent',
-        instructions: 'You can calculate and search',
+        background: 'You can calculate and search',
         tools: [calculatorTool, searchTool],
         provider: {
           apiKey: 'test-key',
@@ -124,7 +124,7 @@ describe('Integration Tests', () => {
     it('should support agent handoffs', () => {
       const researchAgent = new Agent({
         name: 'Research Specialist',
-        instructions: 'Research topics in depth',
+        background: 'Research topics in depth',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -134,7 +134,7 @@ describe('Integration Tests', () => {
 
       const writingAgent = new Agent({
         name: 'Writing Specialist',
-        instructions: 'Write clear and concise content',
+        background: 'Write clear and concise content',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -144,7 +144,7 @@ describe('Integration Tests', () => {
 
       const coordinator = new Agent({
         name: 'Coordinator',
-        instructions: 'Coordinate between specialists',
+        background: 'Coordinate between specialists',
         handoffs: [researchAgent, writingAgent],
         provider: {
           apiKey: 'test-key',
@@ -161,7 +161,7 @@ describe('Integration Tests', () => {
     it('should create orchestrator with worker agents', () => {
       const dataAgent = new Agent({
         name: 'Data Analyst',
-        instructions: 'Analyze data and provide insights',
+        background: 'Analyze data and provide insights',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -171,7 +171,7 @@ describe('Integration Tests', () => {
 
       const reportAgent = new Agent({
         name: 'Report Writer',
-        instructions: 'Write comprehensive reports',
+        background: 'Write comprehensive reports',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -181,7 +181,7 @@ describe('Integration Tests', () => {
 
       const orchestrator = new Orchestrator({
         name: 'Project Manager',
-        instructions: 'Manage the workflow between agents',
+        background: 'Manage the workflow between agents',
         handoffs: [dataAgent, reportAgent],
         provider: {
           apiKey: 'test-key',
@@ -285,7 +285,7 @@ describe('Integration Tests', () => {
 
       const agent = new Agent({
         name: 'Callback Agent',
-        instructions: 'Test callbacks',
+        background: 'Test callbacks',
         onMessage,
         onToolCall,
         provider: {

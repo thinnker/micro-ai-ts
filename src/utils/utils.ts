@@ -126,3 +126,24 @@ export function takeRight<T>(array: T[], n: number = 1): T[] {
   if (n >= array.length) return [...array]
   return array.slice(-n)
 }
+
+/**
+ * Remove empty strings from an array
+ * @param array - Array of strings to filter
+ * @returns New array with empty strings removed
+ */
+export function cleanEmptyList(array: string[]): string[] {
+  return array.filter((item) => item !== '')
+}
+
+/**
+ * Log a labeled message with a visual separator
+ * @param label - Label to display above the logged content
+ * @param args - Arguments to log after the label and separator
+ */
+export function microlog(label: string, ...args: any[]): void {
+  console.log(`\n${label}`)
+  console.log('='.repeat(50))
+  console.log(...args)
+  console.log('='.repeat(50) + '\n')
+}

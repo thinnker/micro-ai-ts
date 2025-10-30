@@ -4,7 +4,7 @@ A lightweight, beginner-friendly TypeScript library for building LLM-powered app
 
 ## ✨ Features
 
-- **🔌 Multi-Provider Support** - Unified interface for OpenAI, Anthropic, Gemini, Groq, DeepSeek, and more
+- **🔌 Multi-Provider Support** - Unified OpenAI-compatible (`/chat/completions`) interface for OpenAI, OpenRouter, Anthropic (via compatible providers), Gemini, Groq, DeepSeek, xAI, 302.ai and more
 - **🤖 Agentic Workflows** - Built-in Agent and Orchestrator classes for autonomous AI systems
 - **🛠️ Tool Calling** - Easy tool creation with automatic execution and Zod schema validation
 - **🧠 Reasoning Models** - First-class support for advanced reasoning models (o1, Gemini 2.5, DeepSeek-R1)
@@ -13,7 +13,6 @@ A lightweight, beginner-friendly TypeScript library for building LLM-powered app
 - **👁️ Vision Support** - Image input capabilities for multimodal models
 - **🎣 Event Hooks** - Monitor and debug LLM interactions with lifecycle callbacks
 - **📘 TypeScript First** - Full type safety with comprehensive type definitions
-- **📚 Excellent Documentation** - Clear examples and guides for developers of all levels
 
 ## 📦 Installation
 
@@ -63,7 +62,7 @@ const weatherTool = createTool(
 // Create an agent with the tool
 const agent = Agent.create({
   name: 'Weather Assistant',
-  instructions: 'Help users check the weather using the get_weather tool.',
+  background: 'Help users check the weather using the get_weather tool.',
   model: 'openai:gpt-4.1-mini',
   tools: [weatherTool],
 })
@@ -80,20 +79,20 @@ import { Agent, Orchestrator } from 'micro-ai-ts'
 // Create specialized agents
 const techSupport = Agent.create({
   name: 'Technical Support',
-  instructions: 'Help with technical issues and troubleshooting.',
+  background: 'Help with technical issues and troubleshooting.',
   model: 'openai:gpt-4.1-mini',
 })
 
 const billing = Agent.create({
   name: 'Billing Specialist',
-  instructions: 'Handle billing and payment inquiries.',
+  background: 'Handle billing and payment inquiries.',
   model: 'openai:gpt-4.1-mini',
 })
 
 // Create orchestrator to coordinate agents
 const orchestrator = Orchestrator.create({
   name: 'Customer Service Manager',
-  instructions: 'Route customer inquiries to the appropriate specialist.',
+  background: 'Route customer inquiries to the appropriate specialist.',
   model: 'openai:gpt-4.1-mini',
   handoffs: [techSupport, billing],
 })
@@ -140,11 +139,12 @@ client.flushAllMessages() // Clear history if required
 
 ### Payload example
 
-#### Success (no `error` key)
+#### Success payload example
 
 ```json
 {
   "metadata": {
+    "id": "aHQkw7WTSzqOS5EqONysbw-0",
     "prompt": "Explain what a TypeScript library is in one sentence.",
     "providerName": "openai",
     "model": "gpt-5-nano",
@@ -183,43 +183,6 @@ client.flushAllMessages() // Clear history if required
 }
 ```
 
-#### Error (has `error` key)
-
-```json
-{
-  "metadata": {
-    "prompt": "Explain what a TypeScript library is in one sentence.",
-    "providerName": "openai",
-    "model": "gpt-5-nano",
-    "timing": {
-      "latencyMs": 584,
-      "latencySeconds": 0.584
-    },
-    "timestamp": "2025-10-28T13:56:31.940Z",
-    "context": {}
-  },
-  "completion": {
-    "role": "assistant",
-    "content": "",
-    "original": ""
-  },
-  "error": {
-    "type": "api_error",
-    "message": "Request failed with status code 400",
-    "status": 400,
-    "code": "ERR_BAD_REQUEST",
-    "details": {
-      "error": {
-        "message": "Unsupported value: 'temperature' does not support 0.7 with this model. Only the default (1) value is supported.",
-        "type": "invalid_request_error",
-        "param": "temperature",
-        "code": "unsupported_value"
-      }
-    }
-  }
-}
-```
-
 ### Agent
 
 Autonomous entities with tool-calling capabilities.
@@ -227,7 +190,7 @@ Autonomous entities with tool-calling capabilities.
 ```typescript
 const agent = Agent.create({
   name: 'Research Assistant',
-  instructions: 'You help users research topics using available tools.',
+  background: 'You help users research topics using available tools.',
   model: 'openai:gpt-4.1-mini',
   tools: [searchTool, analysisTool],
   temperature: 0.5,
@@ -255,7 +218,7 @@ Specialized agent for coordinating multiple sub-agents.
 ```typescript
 const orchestrator = Orchestrator.create({
   name: 'Team Lead',
-  instructions: 'Coordinate specialists to handle complex tasks.',
+  background: 'Coordinate specialists to handle complex tasks.',
   model: 'openai:gpt-4.1-mini',
   handoffs: [agent1, agent2, agent3], // Sub-agents
 })
@@ -302,7 +265,7 @@ const calculatorTool = createTool(
 
 ### Provider Configuration
 
-Micro-AI-TS supports multiple LLM providers out of the box:
+Micro AI supports multiple LLM providers out of the box:
 
 ```typescript
 // OpenAI (default)
@@ -356,7 +319,7 @@ GROK_API_KEY=sk-or-...
 
 ### Reasoning Models
 
-Micro-AI-TS automatically detects and configures reasoning models:
+Micro AI automatically detects and configures reasoning models:
 
 ```typescript
 // OpenAI o1/o3 models
@@ -393,12 +356,12 @@ const client = new Micro({
   systemPrompt: 'You are a {{role}}. {{instructions}}',
   context: {
     role: 'senior developer',
-    instructions: 'Provide clear, concise code examples.',
+    background: 'Provide clear, concise code examples.',
   },
 })
 
 // Update context dynamically
-client.context = { role: 'teacher', instructions: 'Explain concepts simply.' }
+client.context = { role: 'teacher', background: 'Explain concepts simply.' }
 ```
 
 ### Vision Support
@@ -472,7 +435,7 @@ class Micro {
 ```typescript
 interface AgentOptions extends Omit<MicroOptions, 'prompt'> {
   name: string // Agent role name
-  instructions: string // Agent's purpose and behavior
+  background: string // Agent's purpose and behavior
   handoffs?: Agent[] // Sub-agents for delegation
 }
 ```
@@ -681,9 +644,9 @@ MIT
 
 ## 🙏 Acknowledgments
 
-Micro-AI-TS is a research and learning project.
-It was built by one person, whom is trying to simplify AI, Agentic and AI Orchestration workflows specifically in Javascript abd Typescript. Be kind.
+Micro AI is a research and learning project.
+It was built by one person, whom is trying to simplify AI, Agentic and AI Orchestration workflows specifically in Javascript abd Typescript.
 
 ---
 
-**Made with ❤️ for developers building with LLMs**
+**Made with ❤️ for developers building with LLMs and pioneering AI development.**

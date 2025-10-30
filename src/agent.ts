@@ -3,33 +3,23 @@ import { z } from 'zod'
 import { Micro } from './client'
 import type { MicroOptions, Tool, Message, Metadata, Response } from './types'
 import { createTool } from './tools/create-tool'
-import { slugify } from './utils/utils'
+import { cleanEmptyList, slugify } from './utils/utils'
 
-const SYSTEM_PROMPT = dedent`
-You are a {{role}}. {{background}}
-
-## MAIN GOAL
-{{goal}}
-
-## TOOL HINTS
-You have access to the following tools: {{toolsList}}.
-
-## ADDITIONAL INSTRUCTIONS
-{{additionalInstructions}}
-
+const SYSTEM_PROMPT_EXTRA = dedent`
 You should think step by step in order to complete the task with reasoning divided in Thought/Action/Observation that can repeat multiple times if needed.
-You should first reflect with '<thought>{your_thoughts}</thought>', then if necessary, use the tools to get the information you need and print your final response with '<final>{your_final_response}</final>'.
-Mark your final response with '<final>{your_final_response}</final>' tag if you have finished the task and no longer need to use the tools.
+You should first think about it, then if necessary, use the tools to get the information you need.
 Go back and forth between the tools and the context until you have a complete understanding of the task.
 Do not repeat the same tool call in consecutive calls.
-Now begin! Reminder to ALWAYS use the exact characters <final>...<final/> when you provide a definitive answer.
+Now begin!
 `
 
-export interface AgentOptions extends Omit<MicroOptions, 'prompt'> {
+export type AgentOptions = Omit<MicroOptions, 'prompt'> & {
   name: string
-  instructions: string
-  handoffs?: Agent[]
+  background: string
+  goal?: string
   position?: string
+  additionalInstructions?: string
+  handoffs?: Agent[]
 }
 
 const AgentDefaults = {
@@ -39,34 +29,42 @@ const AgentDefaults = {
 export class Agent {
   private client: Micro
   public name: string
-  public instructions: string
+  public background: string
+  public goal: string | undefined
+  public position: string | undefined
   public handoffs?: Agent[]
   public tools?: Tool[]
-  public position: string | undefined
   public model: string | undefined
 
   constructor(options: AgentOptions) {
     this.name = options.name
-    this.instructions = options.instructions
-    this.handoffs = options.handoffs
+    this.background = options.background
+    this.goal = options.goal
+    this.handoffs = options.handoffs || []
     this.tools = options.tools || []
     this.position = options.position
     this.model = options.model
 
     const context = {
       role: options.name,
-      background: options.instructions,
-      goal: options.instructions,
-      additionalInstructions: options.instructions,
-      toolsList: [
-        this.handoffAgentToStringList(this.handoffs || []),
-        this.toolsToStringList(this.tools || []),
-      ],
+      background: options.background,
+      goal: options.goal,
+      additionalInstructions: options.additionalInstructions,
+      toolsList: cleanEmptyList([
+        this.handoffAgentToStringList(this.handoffs),
+        this.toolsToStringList(this.tools),
+      ]),
       ...(options.context || {}),
     }
 
     this.client = new Micro({
-      systemPrompt: SYSTEM_PROMPT,
+      systemPrompt: this.buildSystemPrompt({
+        role: context.role,
+        background: context.background,
+        goal: context.goal,
+        additionalInstructions: context.additionalInstructions,
+        toolsList: context.toolsList || [],
+      }),
       maxTokens: options.maxTokens || 4000,
       temperature: options.temperature ?? 0,
       model: this.model || AgentDefaults.model,
@@ -95,11 +93,50 @@ export class Agent {
     })
   }
 
+  private buildSystemPrompt(options: {
+    role?: string
+    background?: string
+    goal?: string
+    additionalInstructions?: string
+    toolsList?: string[]
+  }): string {
+    const sections: string[] = []
+
+    if (options?.role) {
+      sections.push(`# ROLE\nYou are a ${options.role}.`)
+    }
+
+    if (options?.background) {
+      sections.push(`## BACKGROUND\n${options.background}.`)
+    }
+
+    if (options?.goal) {
+      sections.push(`## MAIN GOAL\n${options.goal}`)
+    }
+
+    if (options?.additionalInstructions) {
+      sections.push(
+        `## ADDITIONAL INSTRUCTIONS\n${options.additionalInstructions}`
+      )
+    }
+
+    const toolsText = options?.toolsList?.length
+      ? options.toolsList.join(', ')
+      : '\n - None provided'
+    sections.push(
+      `## TOOL HINTS\nYou have access to the following tools: ${toolsText}`
+    )
+
+    sections.push(SYSTEM_PROMPT_EXTRA)
+
+    return sections.join('\n\n')
+  }
+
   private handoffAgentToTools(agents: Agent[]): Tool[] {
     return agents.map((agent) =>
       createTool(
         slugify(agent.name),
-        `You are a ${agent.name}. Use this tool to ${agent.instructions}`,
+        dedent`You are a ${agent.name}. Use this tool to ${agent.goal ?? agent.background}`,
         z.object({
           prompt: z.string().describe('The prompt of the request.'),
         }),
@@ -113,7 +150,7 @@ export class Agent {
 
   private toolsToStringList(tools: Tool[]): string {
     if (!tools || tools.length === 0) {
-      return 'None'
+      return ''
     }
     return (
       '\n' +
@@ -130,7 +167,7 @@ export class Agent {
 
   private handoffAgentToStringList(agents: Agent[]): string {
     if (!agents || agents.length === 0) {
-      return 'None'
+      return ''
     }
     return (
       '\n' +
@@ -138,7 +175,7 @@ export class Agent {
         .map(
           (agent) =>
             `- ${agent.name} [${slugify(agent.name)}]: Its role is to ${
-              agent.instructions
+              agent.background
             }`
         )
         .join('\n')

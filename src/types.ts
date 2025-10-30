@@ -36,9 +36,11 @@ export type ContentPart =
 
 export type ContentOptions = string | null | ContentPart[]
 
+export type MessageRole = 'system' | 'user' | 'assistant' | 'tool'
+
 export interface Message {
   id?: string
-  role: 'system' | 'user' | 'assistant' | 'tool'
+  role: MessageRole
   content: ContentOptions
   name?: string
   tool_calls?: ToolCall[]
@@ -91,8 +93,10 @@ export type Metadata = {
   hasThoughts?: boolean
 }
 
+export type ErrorPayloadType = 'timeout' | 'api_error'
+
 export type ErrorPayload = {
-  type: 'timeout' | 'api_error'
+  type: ErrorPayloadType
   message: string
   status?: number
   code?: string
@@ -108,13 +112,14 @@ export type Response = {
     original: string
   }
   error?: ErrorPayload
+  fullResponse?: Record<string, unknown>
 }
 
 export type ToolResponse = {
   toolName: string
-  arguments: any
-  result: any
-  error?: any
+  arguments: string
+  result: string | null
+  error?: string
 }
 
 export type OnCompleteResponse = (

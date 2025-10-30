@@ -292,7 +292,7 @@ export class Micro {
     return this
   }
 
-  private async makeRequest(): Promise<any> {
+  private async makeRequest(): Promise<Record<string, any>> {
     const requestBody: any = {
       model: this.model,
       messages: this.messages,
@@ -419,10 +419,10 @@ export class Micro {
         name: toolName,
         content: typeof result === 'string' ? result : JSON.stringify(result),
       })
-    }
 
-    if (this.onMessage) {
-      this.onMessage(this.messages)
+      if (this.onMessage) {
+        this.onMessage(this.messages)
+      }
     }
   }
 
@@ -487,6 +487,7 @@ export class Micro {
             hasThoughts,
           }),
         },
+        fullResponse: responseData,
         completion: {
           role: message?.role || 'assistant',
           content: content.trim(),
@@ -535,7 +536,7 @@ export class Micro {
         this.onError(errorResponse.error)
       }
 
-      return errorResponse
+      return Promise.reject(errorResponse.error)
     }
   }
 

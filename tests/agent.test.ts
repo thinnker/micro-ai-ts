@@ -8,7 +8,7 @@ describe('Agent', () => {
     it('should create agent with basic options', () => {
       const agent = new Agent({
         name: 'TestAgent',
-        instructions: 'You are a test agent',
+        background: 'You are a test agent',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -17,7 +17,7 @@ describe('Agent', () => {
       })
 
       expect(agent.name).toBe('TestAgent')
-      expect(agent.instructions).toBe('You are a test agent')
+      expect(agent.background).toBe('You are a test agent')
     })
 
     it('should initialize with tools', () => {
@@ -27,10 +27,9 @@ describe('Agent', () => {
         z.object({ input: z.string() }),
         async (params) => `Result: ${params.input}`
       )
-
       const agent = new Agent({
         name: 'ToolAgent',
-        instructions: 'Agent with tools',
+        background: 'Agent with tools',
         tools: [testTool],
         provider: {
           apiKey: 'test-key',
@@ -46,7 +45,7 @@ describe('Agent', () => {
     it('should create agent with handoffs', () => {
       const subAgent = new Agent({
         name: 'SubAgent',
-        instructions: 'A sub agent',
+        background: 'A sub agent',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -56,7 +55,7 @@ describe('Agent', () => {
 
       const mainAgent = new Agent({
         name: 'MainAgent',
-        instructions: 'Main agent with handoffs',
+        background: 'Main agent with handoffs',
         handoffs: [subAgent],
         provider: {
           apiKey: 'test-key',
@@ -72,7 +71,7 @@ describe('Agent', () => {
     it('should use static create method', () => {
       const agent = Agent.create({
         name: 'CreatedAgent',
-        instructions: 'Created via static method',
+        background: 'Created via static method',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -89,7 +88,7 @@ describe('Agent', () => {
     it('should add user prompt', () => {
       const agent = new Agent({
         name: 'TestAgent',
-        instructions: 'Test',
+        background: 'Test',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -108,7 +107,7 @@ describe('Agent', () => {
     it('should add assistant prompt', () => {
       const agent = new Agent({
         name: 'TestAgent',
-        instructions: 'Test',
+        background: 'Test',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -127,7 +126,7 @@ describe('Agent', () => {
     it('should retrieve messages', () => {
       const agent = new Agent({
         name: 'TestAgent',
-        instructions: 'Test',
+        background: 'Test',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -147,7 +146,7 @@ describe('Agent', () => {
     it('should return agent metadata', () => {
       const agent = new Agent({
         name: 'TestAgent',
-        instructions: 'Test agent',
+        background: 'Test agent',
         model: 'gpt-4o-mini',
         provider: {
           apiKey: 'test-key',
@@ -169,7 +168,7 @@ describe('Agent', () => {
     it('should convert handoff agents to tools', () => {
       const specialistAgent = new Agent({
         name: 'Specialist Agent',
-        instructions: 'Handle specialized tasks',
+        background: 'Handle specialized tasks',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -179,7 +178,7 @@ describe('Agent', () => {
 
       const mainAgent = new Agent({
         name: 'Main Agent',
-        instructions: 'Coordinate tasks',
+        background: 'Coordinate tasks',
         handoffs: [specialistAgent],
         provider: {
           apiKey: 'test-key',
@@ -202,7 +201,7 @@ describe('Agent', () => {
 
       const handoffAgent = new Agent({
         name: 'Handoff Agent',
-        instructions: 'Handle handoffs',
+        background: 'Handle handoffs',
         provider: {
           apiKey: 'test-key',
           baseURL: 'https://api.example.com',
@@ -212,7 +211,7 @@ describe('Agent', () => {
 
       const agent = new Agent({
         name: 'Combined Agent',
-        instructions: 'Use both tools and handoffs',
+        background: 'Use both tools and handoffs',
         tools: [regularTool],
         handoffs: [handoffAgent],
         provider: {
@@ -231,7 +230,7 @@ describe('Agent', () => {
     it('should accept custom model', () => {
       const agent = new Agent({
         name: 'CustomModelAgent',
-        instructions: 'Test',
+        background: 'Test',
         model: 'gpt-4o',
         provider: {
           apiKey: 'test-key',
@@ -246,7 +245,7 @@ describe('Agent', () => {
     it('should accept temperature setting', () => {
       const agent = new Agent({
         name: 'TempAgent',
-        instructions: 'Test',
+        background: 'Test',
         temperature: 0.7,
         provider: {
           apiKey: 'test-key',
@@ -262,7 +261,7 @@ describe('Agent', () => {
     it('should accept max tokens', () => {
       const agent = new Agent({
         name: 'TokenAgent',
-        instructions: 'Test',
+        background: 'Test',
         maxTokens: 2000,
         provider: {
           apiKey: 'test-key',
@@ -277,7 +276,7 @@ describe('Agent', () => {
     it('should accept reasoning options', () => {
       const agent = new Agent({
         name: 'ReasoningAgent',
-        instructions: 'Test',
+        background: 'Test',
         model: 'gpt-o1', // Use a reasoning model
         reasoning: true,
         reasoning_effort: 'high',
@@ -300,7 +299,7 @@ describe('Agent', () => {
 
       const agent = new Agent({
         name: 'CallbackAgent',
-        instructions: 'Test',
+        background: 'Test',
         onComplete,
         provider: {
           apiKey: 'test-key',
@@ -317,7 +316,7 @@ describe('Agent', () => {
 
       const agent = new Agent({
         name: 'MessageAgent',
-        instructions: 'Test',
+        background: 'Test',
         onMessage,
         provider: {
           apiKey: 'test-key',
@@ -335,7 +334,7 @@ describe('Agent', () => {
 
       const agent = new Agent({
         name: 'ToolCallbackAgent',
-        instructions: 'Test',
+        background: 'Test',
         onToolCall,
         provider: {
           apiKey: 'test-key',
@@ -353,7 +352,7 @@ describe('Orchestrator', () => {
   it('should create orchestrator with position set', () => {
     const orchestrator = new Orchestrator({
       name: 'MainOrchestrator',
-      instructions: 'Coordinate all agents',
+      background: 'Coordinate all agents',
       provider: {
         apiKey: 'test-key',
         baseURL: 'https://api.example.com',
@@ -369,7 +368,7 @@ describe('Orchestrator', () => {
   it('should use static create method', () => {
     const orchestrator = Orchestrator.create({
       name: 'CreatedOrchestrator',
-      instructions: 'Created via static method',
+      background: 'Created via static method',
       provider: {
         apiKey: 'test-key',
         baseURL: 'https://api.example.com',
@@ -384,7 +383,7 @@ describe('Orchestrator', () => {
   it('should support handoffs like regular agent', () => {
     const workerAgent = new Agent({
       name: 'Worker',
-      instructions: 'Do work',
+      background: 'Do work',
       provider: {
         apiKey: 'test-key',
         baseURL: 'https://api.example.com',
@@ -394,7 +393,7 @@ describe('Orchestrator', () => {
 
     const orchestrator = new Orchestrator({
       name: 'Coordinator',
-      instructions: 'Coordinate workers',
+      background: 'Coordinate workers',
       handoffs: [workerAgent],
       provider: {
         apiKey: 'test-key',

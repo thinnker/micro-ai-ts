@@ -3,7 +3,7 @@ import { Agent, Orchestrator } from '../../src/index'
 async function main() {
   const pythonExpert = Agent.create({
     name: 'Python Expert',
-    instructions:
+    background:
       'You are a Python programming expert. Help with Python code, best practices, and Python-specific questions. Remember context from previous interactions.',
     model: 'openai:gpt-4.1-mini',
     temperature: 0.4,
@@ -11,7 +11,7 @@ async function main() {
 
   const javascriptExpert = Agent.create({
     name: 'JavaScript Expert',
-    instructions:
+    background:
       'You are a JavaScript/TypeScript expert. Help with JS/TS code, best practices, and JavaScript-specific questions. Remember context from previous interactions.',
     model: 'openai:gpt-4.1-mini',
     temperature: 0.4,
@@ -19,7 +19,7 @@ async function main() {
 
   const architectExpert = Agent.create({
     name: 'Software Architect',
-    instructions:
+    background:
       'You are a software architect. Provide high-level design advice, architecture patterns, and system design guidance. Consider context from previous discussions.',
     model: 'openai:gpt-4.1-mini',
     temperature: 0.5,
@@ -27,7 +27,7 @@ async function main() {
 
   const orchestrator = Orchestrator.create({
     name: 'Development Team Lead',
-    instructions:
+    background:
       'You are a development team lead. Route programming questions to the appropriate expert: Python Expert for Python questions, JavaScript Expert for JS/TS questions, and Software Architect for design and architecture questions. Maintain context across the conversation.',
     model: 'openai:gpt-4.1-mini',
     handoffs: [pythonExpert, javascriptExpert, architectExpert],

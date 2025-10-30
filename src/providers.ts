@@ -23,7 +23,7 @@ export const Providers = {
     model,
   }),
 
-  groq: (model = 'moonshotai/kimi-k2-instruct-0905'): Provider => ({
+  groq: (model = 'llama-3.3-70b-versatile'): Provider => ({
     apiKey: process.env.GROQ_API_KEY || '',
     baseURL: process.env.GROQ_BASE_URL || 'https://api.groq.com/openai/v1',
     model,

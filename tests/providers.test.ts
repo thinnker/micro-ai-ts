@@ -92,9 +92,9 @@ describe('Providers', () => {
     it('should accept custom model', () => {
       process.env.GROQ_API_KEY = 'gsk-test-key'
 
-      const provider = Providers.groq('llama-3.3-70b')
+      const provider = Providers.groq('llama-3.3-70b-versatile')
 
-      expect(provider.model).toBe('llama-3.3-70b')
+      expect(provider.model).toBe('llama-3.3-70b-versatile')
     })
   })
 
