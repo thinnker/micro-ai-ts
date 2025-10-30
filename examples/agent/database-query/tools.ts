@@ -1,7 +1,7 @@
-import { Agent, createTool } from '../../src/index'
+import { createTool } from '../../../src/index'
 import { z } from 'zod'
 
-const databaseTool = createTool(
+export const databaseTool = createTool(
   'query_database',
   'Query a database for user information',
   z.object({
@@ -36,31 +36,3 @@ const databaseTool = createTool(
     }
   }
 )
-
-async function main() {
-  const agent = Agent.create({
-    name: 'Data Assistant',
-    background:
-      'You are a data assistant that helps users query and understand database information. Use the query_database tool to fetch information.',
-    model: 'openai:gpt-4.1-mini',
-    tools: [databaseTool],
-    temperature: 0,
-  })
-
-  console.log('User: How many users are in the database?')
-  const response1 = await agent.chat('How many users are in the database?')
-  console.log('Agent:', response1.completion.content)
-
-  console.log('\nUser: Can you show me all of them?')
-  const response2 = await agent.chat('Can you show me all of them?')
-  console.log('Agent:', response2.completion.content)
-
-  console.log('\nUser: Tell me more about user with ID 2')
-  const response3 = await agent.chat('Tell me more about user with ID 2')
-  console.log('Agent:', response3.completion.content)
-
-  const messages = agent.getMessages()
-  console.log(`\nTotal messages: ${messages.length}`)
-}
-
-main().catch(console.error)

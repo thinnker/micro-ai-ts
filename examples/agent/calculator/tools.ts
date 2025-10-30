@@ -1,7 +1,7 @@
-import { Agent, createTool } from '../../src/index'
+import { createTool } from '../../../src/index'
 import { z } from 'zod'
 
-const calculatorTool = createTool(
+export const calculatorTool = createTool(
   'calculator',
   'Performs basic arithmetic operations (add, subtract, multiply, divide)',
   z.object({
@@ -37,22 +37,3 @@ const calculatorTool = createTool(
     }
   }
 )
-
-async function main() {
-  const agent = Agent.create({
-    name: 'Math Assistant',
-    background:
-      'You are a helpful math assistant. Use the calculator tool to perform calculations and explain the results clearly.',
-    model: 'openai:gpt-4.1-nano',
-    tools: [calculatorTool],
-  })
-
-  const response = await agent.chat(
-    'What is 156 multiplied by 23? Please calculate it and explain the result.'
-  )
-
-  console.log('Response:', response.completion.content)
-  console.log('\nTokens:', response.metadata.tokensUsed?.total_tokens || 'N/A')
-}
-
-main().catch(console.error)

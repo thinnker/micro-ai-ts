@@ -553,10 +553,10 @@ The library includes comprehensive examples organized by category:
 
 ### Agent
 
-- **[calculator.ts](./examples/agent/calculator.ts)** - Math operations tool
-- **[weather-assistant.ts](./examples/agent/weather-assistant.ts)** - Weather and time tools
-- **[database-query.ts](./examples/agent/database-query.ts)** - Database query tool
-- **[error-handling.ts](./examples/agent/error-handling.ts)** - Tool error handling
+- **[calculator](./examples/agent/calculator/)** - Math operations tool
+- **[weather-assistant](./examples/agent/weather-assistant/)** - Weather and time tools
+- **[database-query](./examples/agent/database-query/)** - Database query tool
+- **[error-handling](./examples/agent/error-handling/)** - Tool error handling
 
 ### Orchestrator
 
@@ -593,10 +593,10 @@ pnpm check:example examples/providers/deepseek.ts
 pnpm check:example examples/providers/grok.ts
 
 # Agent examples
-pnpm check:example examples/agent/calculator.ts
-pnpm check:example examples/agent/weather-assistant.ts
-pnpm check:example examples/agent/database-query.ts
-pnpm check:example examples/agent/error-handling.ts
+pnpm check:example examples/agent/calculator/calculator.ts
+pnpm check:example examples/agent/weather-assistant/weather-assistant.ts
+pnpm check:example examples/agent/database-query/database-query.ts
+pnpm check:example examples/agent/error-handling/error-handling.ts
 
 # Orchestrator examples
 pnpm check:example examples/orchestrator/customer-service.ts
@@ -608,7 +608,7 @@ pnpm check:example examples/cli/interactive-chat.ts
 
 # Or run with tsx directly
 pnpm dlx tsx examples/basic/simple-chat.ts
-pnpm dlx tsx examples/agent/calculator.ts
+pnpm dlx tsx examples/agent/calculator/calculator.ts
 pnpm dlx tsx examples/orchestrator/customer-service.ts
 ```
 

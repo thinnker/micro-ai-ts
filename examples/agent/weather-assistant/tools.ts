@@ -1,8 +1,7 @@
-import { Agent, createTool } from '../../src/index'
+import { createTool } from '../../../src/index'
 import { z } from 'zod'
-import { microlog } from '../../src/utils/utils'
 
-const weatherTool = createTool(
+export const weatherTool = createTool(
   'get_weather',
   'Get the current weather for a specific location',
   z.object({
@@ -44,7 +43,7 @@ const weatherTool = createTool(
   }
 )
 
-const timeTool = createTool(
+export const timeTool = createTool(
   'get_time',
   'Get the current time for a specific timezone',
   z.object({
@@ -69,22 +68,3 @@ const timeTool = createTool(
     }
   }
 )
-
-async function main() {
-  const agent = Agent.create({
-    name: 'Personal Assistant',
-    background:
-      'You are a helpful personal assistant. Use the available tools to provide accurate information about weather and time. Always be friendly and concise.',
-    goal: 'Answer the user queries and provide accurate information.',
-    debug: true,
-    tools: [weatherTool, timeTool],
-  })
-
-  const response = await agent.chat(
-    "What's the weather like in Tokyo and what time is it there?"
-  )
-
-  microlog('Response', response.completion.content)
-}
-
-main().catch(console.error)
