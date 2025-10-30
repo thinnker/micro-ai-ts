@@ -86,7 +86,7 @@ describe('Providers', () => {
 
       expect(provider.apiKey).toBe('gsk-test-key')
       expect(provider.baseURL).toBe('https://api.groq.com/openai/v1')
-      expect(provider.model).toBe('moonshotai/kimi-k2-instruct-0905')
+      expect(provider.model).toBe('llama-3.3-70b-versatile')
     })
 
     it('should accept custom model', () => {
