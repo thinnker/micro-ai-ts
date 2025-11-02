@@ -102,6 +102,20 @@ type Response = {
     error?: ErrorPayload;
     fullResponse?: Record<string, unknown>;
 };
+type StreamChunk = {
+    delta: string;
+    fullContent: string;
+    reasoning?: string;
+    done: boolean;
+    metadata?: Metadata;
+    completion?: {
+        role: string;
+        content: string;
+        reasoning?: string;
+        original: string;
+    };
+};
+type StreamResponse = AsyncGenerator<StreamChunk, void, unknown>;
 type ToolResponse = {
     toolName: string;
     arguments: string;
@@ -125,7 +139,7 @@ interface MicroOptions {
     temperature?: number;
     tools?: Tool[];
     tool_choice?: ToolChoice;
-    streaming?: boolean;
+    stream?: boolean;
     reasoning?: boolean;
     reasoning_effort?: ReasoningLevel;
     timeout?: number;
@@ -150,7 +164,7 @@ declare class Micro {
     private temperature?;
     private tools?;
     private tool_choice?;
-    private streaming;
+    private streamEnabled;
     private parsedSystemPrompt;
     private defaultProvider;
     private modelName;
@@ -191,6 +205,8 @@ declare class Micro {
     private handleToolCalls;
     invoke(): Promise<Response>;
     chat(prompt: string, bufferString?: string): Promise<Response>;
+    private processStream;
+    stream(prompt: string, bufferString?: string): Promise<StreamResponse>;
 }
 
 type AgentOptions = Omit<MicroOptions, 'prompt'> & {
@@ -284,6 +300,7 @@ interface HttpClientOptions {
     body?: Record<string, any>;
     timeout?: number;
     method?: HttpMethod;
+    stream?: boolean;
 }
 interface HttpError extends Error {
     response?: {
@@ -334,4 +351,4 @@ declare function parseTemplate(template: string, context?: Record<string, any>):
  */
 declare function slugify(text: string): string;
 
-export { Agent, type AgentOptions, type ContentOptions, type ContentPart, type ErrorPayload, type HttpClientOptions, type HttpError, type HttpMethod, type Message, type Metadata, Micro, type MicroOptions, type OnCompleteResponse, type OnErrorResponse, type OnMessageResponse, type OnRequestData, type OnResponseData, type OnToolCall, Orchestrator, type Provider, Providers, type ReasoningLevel, type ReasoningOptions, type Response, type TokenUsage, type Tool, type ToolCall, type ToolChoice, type ToolResponse, createProvider, createTool, del, get, head, http, httpClient, options, parseTemplate, patch, post, put, randomId, slugify };
+export { Agent, type AgentOptions, type ContentOptions, type ContentPart, type ErrorPayload, type HttpClientOptions, type HttpError, type HttpMethod, type Message, type Metadata, Micro, type MicroOptions, type OnCompleteResponse, type OnErrorResponse, type OnMessageResponse, type OnRequestData, type OnResponseData, type OnToolCall, Orchestrator, type Provider, Providers, type ReasoningLevel, type ReasoningOptions, type Response, type StreamChunk, type StreamResponse, type TokenUsage, type Tool, type ToolCall, type ToolChoice, type ToolResponse, createProvider, createTool, del, get, head, http, httpClient, options, parseTemplate, patch, post, put, randomId, slugify };
