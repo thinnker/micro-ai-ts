@@ -128,7 +128,7 @@ describe('Providers', () => {
 
       expect(provider.apiKey).toBe('ai302-test-key')
       expect(provider.baseURL).toBe('https://api.302.ai/v1')
-      expect(provider.model).toBe('gpt-4o-mini')
+      expect(provider.model).toBe('gpt-4.1-mini')
     })
 
     it('should accept custom model', () => {
@@ -148,7 +148,7 @@ describe('Providers', () => {
 
       expect(provider.apiKey).toBe('or-test-key')
       expect(provider.baseURL).toBe('https://openrouter.ai/api/v1')
-      expect(provider.model).toBe('anthropic/claude-haiku-4.5')
+      expect(provider.model).toBe('openai/gpt-4.1-mini')
     })
 
     it('should accept custom model', () => {

@@ -6,6 +6,7 @@ import type {
   ReasoningLevel,
   Metadata,
   Response,
+  StreamResponse,
 } from './types'
 import { Providers } from './providers'
 import { httpClient } from './http'
@@ -43,7 +44,7 @@ export class Micro {
   private temperature?: number
   private tools?: MicroOptions['tools']
   private tool_choice?: MicroOptions['tool_choice']
-  private streaming: boolean
+  private streamEnabled: boolean
   private parsedSystemPrompt: string
   private defaultProvider: Omit<Provider, 'model'>
   private modelName: string
@@ -127,7 +128,7 @@ export class Micro {
     this.tool_choice = options.tool_choice
 
     this.debug = options?.debug || false
-    this.streaming = options?.streaming || false
+    this.streamEnabled = options?.stream || false
 
     this.reasoning = options?.reasoning ?? true
     this.reasoning_effort = options.reasoning_effort ?? 'medium'
@@ -289,11 +290,13 @@ export class Micro {
     return this
   }
 
-  private async makeRequest(): Promise<Record<string, any>> {
+  private async makeRequest(
+    enableStream: boolean = false
+  ): Promise<Record<string, any> | Response> {
     const requestBody: any = {
       model: this.model,
       messages: this.messages,
-      stream: this.streaming,
+      stream: enableStream || this.streamEnabled,
     }
 
     if (this.temperature) {
@@ -352,9 +355,10 @@ export class Micro {
       body: requestBody,
       timeout: this.timeout,
       method: 'POST',
+      stream: enableStream || this.streamEnabled,
     })
 
-    if (this.onResponseData) {
+    if (this.onResponseData && !enableStream) {
       this.onResponseData(data)
     }
 
@@ -431,7 +435,7 @@ export class Micro {
     const startTime = Date.now()
 
     try {
-      const responseData = await this.makeRequest()
+      const responseData = (await this.makeRequest()) as Record<string, any>
 
       const choice = responseData.choices?.[0]
       const message = choice?.message
@@ -544,5 +548,218 @@ export class Micro {
   public async chat(prompt: string, bufferString?: string): Promise<Response> {
     this.setUserMessage(prompt, bufferString)
     return this.invoke()
+  }
+
+  private async *processStream(
+    response: Response,
+    startTime: number
+  ): StreamResponse {
+    const reader = (response as any).body?.getReader()
+    if (!reader) {
+      throw new Error('Stream not available')
+    }
+
+    const decoder = new TextDecoder()
+    let fullContent = ''
+    let reasoning = ''
+    let role = 'assistant'
+    let buffer = ''
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
+
+        if (done) {
+          break
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmedLine = line.trim()
+          if (!trimmedLine || trimmedLine === 'data: [DONE]') {
+            continue
+          }
+
+          if (trimmedLine.startsWith('data: ')) {
+            try {
+              const jsonStr = trimmedLine.slice(6)
+              const parsed = JSON.parse(jsonStr)
+              const delta = parsed.choices?.[0]?.delta
+
+              if (delta?.role) {
+                role = delta.role as 'assistant' | 'user' | 'system' | 'tool'
+              }
+
+              if (delta?.content) {
+                fullContent += delta.content
+
+                yield {
+                  delta: delta.content,
+                  fullContent,
+                  done: false,
+                }
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+
+      // Extract reasoning if present
+      if (this.reasoning && this.isReasoningModel && fullContent) {
+        if (hasTag(fullContent, 'thinking')) {
+          reasoning = extractInnerTag(fullContent, 'thinking')
+          fullContent = stripTag(fullContent, 'thinking')
+        } else if (hasTag(fullContent, 'think')) {
+          reasoning = extractInnerTag(fullContent, 'think')
+          fullContent = stripTag(fullContent, 'think')
+        }
+      }
+
+      // Add assistant message to history
+      this.messages.push({
+        role: role as 'assistant' | 'user' | 'system' | 'tool',
+        content: fullContent,
+      })
+
+      if (this.onMessage) {
+        this.onMessage(this.messages)
+      }
+
+      const endTime = Date.now()
+      const latencyMs = endTime - startTime
+
+      const metadata: Metadata = {
+        id: this.identifier,
+        prompt: this.prompt,
+        providerName: this.providerName,
+        model: this.modelName,
+        timing: {
+          latencyMs,
+          latencySeconds: latencyMs / 1000,
+        },
+        timestamp: new Date().toISOString(),
+        context: this.context,
+        ...(this.isReasoningModel && {
+          isReasoningEnabled: this.reasoning,
+          isReasoningModel: this.isReasoningModel,
+          reasoning_effort: this.reasoning_effort,
+          hasThoughts: reasoning.length > 0,
+        }),
+      }
+
+      const completion = {
+        role,
+        content: fullContent.trim(),
+        reasoning: reasoning.trim(),
+        original: fullContent,
+      }
+
+      const finalResponse: Response = {
+        metadata,
+        completion,
+      }
+
+      if (this.onComplete) {
+        this.onComplete(finalResponse, this.messages)
+      }
+
+      // Yield final chunk with metadata and completion
+      yield {
+        delta: '',
+        fullContent: fullContent.trim(),
+        reasoning: reasoning.trim(),
+        done: true,
+        metadata,
+        completion,
+      }
+    } catch (error: any) {
+      const endTime = Date.now()
+      const latencyMs = endTime - startTime
+
+      const errorResponse: Response = {
+        metadata: {
+          id: this.identifier,
+          prompt: this.prompt,
+          providerName: this.providerName,
+          model: this.modelName,
+          timing: {
+            latencyMs,
+            latencySeconds: latencyMs / 1000,
+          },
+          timestamp: new Date().toISOString(),
+          context: this.context,
+        },
+        completion: {
+          role: 'assistant',
+          content: '',
+          original: '',
+        },
+        error: {
+          type: 'api_error',
+          message: error.message,
+        },
+      }
+
+      if (this.onError) {
+        this.onError(errorResponse.error)
+      }
+
+      throw errorResponse.error
+    }
+  }
+
+  public async stream(
+    prompt: string,
+    bufferString?: string
+  ): Promise<StreamResponse> {
+    this.setUserMessage(prompt, bufferString)
+
+    const startTime = Date.now()
+
+    try {
+      const response = await this.makeRequest(true)
+      return this.processStream(response as Response, startTime)
+    } catch (error: any) {
+      const endTime = Date.now()
+      const latencyMs = endTime - startTime
+
+      const errorResponse: Response = {
+        metadata: {
+          id: this.identifier,
+          prompt: this.prompt,
+          providerName: this.providerName,
+          model: this.modelName,
+          timing: {
+            latencyMs,
+            latencySeconds: latencyMs / 1000,
+          },
+          timestamp: new Date().toISOString(),
+          context: this.context,
+        },
+        completion: {
+          role: 'assistant',
+          content: '',
+          original: '',
+        },
+        error: {
+          type: error.code === 'ECONNABORTED' ? 'timeout' : 'api_error',
+          message: error.message,
+          status: error.response?.status,
+          code: error.code,
+          details: error.response?.data,
+        },
+      }
+
+      if (this.onError) {
+        this.onError(errorResponse.error)
+      }
+
+      throw errorResponse.error
+    }
   }
 }

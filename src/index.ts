@@ -39,6 +39,8 @@ export type {
   OnResponseData,
   OnErrorResponse,
   OnToolCall,
+  StreamChunk,
+  StreamResponse,
 } from './types'
 
 export type { AgentOptions } from './agent'

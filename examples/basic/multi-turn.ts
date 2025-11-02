@@ -3,7 +3,6 @@ import { Micro } from '../../src/index'
 async function main() {
   const client = new Micro({
     model: 'openai:gpt-4.1-nano',
-    // model: "ai302:grok-4-fast-non-reasoning",
     systemPrompt: 'You are a friendly tutor teaching programming concepts.',
     maxTokens: 200,
   })

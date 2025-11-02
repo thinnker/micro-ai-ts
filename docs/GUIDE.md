@@ -93,6 +93,43 @@ const orchestrator = Orchestrator.create({
 })
 ```
 
+### 4. Streaming
+
+Streaming lets you see the AI's response as it's being generated, token by token, instead of waiting for the complete response.
+
+**Think of it like:** Watching someone type a message in real-time vs. receiving the entire message at once.
+
+```typescript
+import { Micro } from 'micro-ai-ts'
+
+const client = new Micro({ model: 'openai:gpt-4o-mini' })
+
+// Stream the response
+const stream = await client.stream('Write a short poem')
+
+for await (const chunk of stream) {
+  if (!chunk.done) {
+    // Print each word as it arrives
+    process.stdout.write(chunk.delta)
+  } else {
+    // Final chunk with complete response
+    console.log('\n\nDone!')
+  }
+}
+```
+
+**When to use streaming:**
+
+- Building chat interfaces where users want to see responses appear gradually
+- Long responses where you want to show progress
+- Better perceived performance (users see output faster)
+
+**When to use regular chat:**
+
+- Batch processing where you need the complete response
+- When you need to process the entire response before showing it
+- Simpler code when real-time updates aren't needed
+
 ## Your First LLM Interaction
 
 Let's build a simple chatbot step by step.
@@ -408,7 +445,7 @@ Regular models respond quickly with their first answer. Reasoning models take ti
 
 ```typescript
 const reasoningClient = new Micro({
-  model: 'openai:o1-mini', // A reasoning model
+  model: 'openai:gpt-5-nano', // A reasoning model
   reasoning: true,
   reasoning_effort: 'medium', // 'low', 'medium', or 'high'
 })
@@ -430,6 +467,7 @@ console.log('Answer:', response.completion.content)
 **OpenAI:**
 
 - `openai:gpt-5-mini` - Fast reasoning
+- `openai:gpt-5-nano` - Super fast reasoning
 - `openai:gpt-5` - Advanced reasoning
 - `openai:o1-mini` - Fast reasoning
 - `openai:o1` - Advanced reasoning
@@ -438,17 +476,18 @@ console.log('Answer:', response.completion.content)
 **Google:**
 
 - `gemini:gemini-2.5-pro` - Advanced reasoning
-- `gemini:gemini-2.5-flash-lite` - Fast reasoning
+- `gemini:gemini-2.5-flash` - Fast reasoning
+- `gemini:gemini-2.5-flash-lite` - Super fast reasoning
 
 **DeepSeek:**
 
-- `deepseek:deepseek-r1` - Open-source reasoning
+- `deepseek:deepseek-reasoner` - Open-source reasoning
 
 **Alibaba:**
 
-- `ai302:glm-4.5-flash` - Fast reasoning
-- `ai302:glm-4.5` - Advanced reasoning
-- `ai302:glm-4.6` - Advanced reasoning
+- `openrouter:glm-4.5-air` - Fast reasoning
+- `openrouter:glm-4.5` - Advanced reasoning
+- `openrouter:glm-4.6` - Advanced reasoning
 
 ### Reasoning Effort Levels
 

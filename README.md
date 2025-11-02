@@ -12,6 +12,7 @@ A lightweight, beginner-friendly TypeScript library for building LLM-powered app
 - **📝 Template Variables** - Dynamic prompt injection with context objects
 - **👁️ Vision Support** - Image input capabilities for multimodal models
 - **🎣 Event Hooks** - Monitor and debug LLM interactions with lifecycle callbacks
+- **⚡ Streaming & Non-Streaming** - Support for both real-time token streaming and complete response modes
 - **📘 TypeScript First** - Full type safety with comprehensive type definitions
 
 ## 📦 Installation
@@ -129,6 +130,16 @@ console.log(response.completion.content) // The actual response text
 console.log(response.metadata.model) // Model used
 console.log(response.metadata.tokensUsed) // Token usage
 console.log(response.metadata.timing) // Response time
+
+// Streaming responses
+const stream = await client.stream('Tell me a story')
+for await (const chunk of stream) {
+  if (!chunk.done) {
+    process.stdout.write(chunk.delta) // Print each token as it arrives
+  } else {
+    console.log('\nFinal response:', chunk.fullContent)
+  }
+}
 
 // Manage conversation
 client.setSystemPrompt('New system prompt')
@@ -261,6 +272,44 @@ const calculatorTool = createTool(
 )
 ```
 
+### Streaming Responses
+
+Stream responses token-by-token for real-time output. The `.stream()` method automatically sets `stream: true` and returns an async generator.
+
+```typescript
+const client = new Micro({ model: 'openai:gpt-4o-mini' })
+
+// Stream a response
+const stream = await client.stream('Write a short poem about TypeScript')
+
+for await (const chunk of stream) {
+  if (!chunk.done) {
+    // Print each token as it arrives
+    process.stdout.write(chunk.delta)
+  } else {
+    // Final chunk contains complete response and metadata
+    console.log('\n\nComplete response:', chunk.fullContent)
+    console.log('Latency:', chunk.metadata.timing.latencyMs, 'ms')
+
+    // For reasoning models, access the thinking process
+    if (chunk.reasoning) {
+      console.log('Reasoning:', chunk.reasoning)
+    }
+  }
+}
+
+// Streaming works with multi-turn conversations
+const stream2 = await client.stream('Now make it rhyme')
+for await (const chunk of stream2) {
+  if (!chunk.done) process.stdout.write(chunk.delta)
+}
+```
+
+**Stream vs Chat:**
+
+- `.chat()` - Returns complete response after generation finishes (requires `stream: false`)
+- `.stream()` - Returns tokens as they're generated (automatically sets `stream: true`)
+
 ## 🔧 Configuration
 
 ### Provider Configuration
@@ -324,7 +373,7 @@ Micro AI automatically detects and configures reasoning models:
 ```typescript
 // OpenAI o1/o3 models
 const client = new Micro({
-  model: 'openai:o1-mini',
+  model: 'openai:gpt-5-nano',
   reasoning: true,
   reasoning_effort: 'medium', // 'low' | 'medium' | 'high'
 })
@@ -391,7 +440,7 @@ interface MicroOptions {
   temperature?: number // 0.0 (deterministic) to 1.0 (creative)
   tools?: Tool[] // Available tools
   tool_choice?: ToolChoice // Tool selection strategy
-  streaming?: boolean // Enable streaming (not yet implemented)
+  stream?: boolean // Enable stream (not yet implemented)
   reasoning?: boolean // Enable reasoning models
   reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high'
   timeout?: number // Request timeout in ms
@@ -532,7 +581,7 @@ const client = new Micro({
 
 ## 📝 Examples
 
-The library includes comprehensive examples organized by category:
+The library includes comprehensive examples organized by category.
 
 ### Basic
 
@@ -541,6 +590,15 @@ The library includes comprehensive examples organized by category:
 - **[multi-turn.ts](./examples/basic/multi-turn.ts)** - Multi-turn conversations
 - **[template-context.ts](./examples/basic/template-context.ts)** - Template variables
 - **[event-hooks.ts](./examples/basic/event-hooks.ts)** - Event monitoring
+
+### Streaming
+
+- **[simple-stream.ts](./examples/stream/simple-stream.ts)** - Basic streaming
+- **[stream-multi-turn.ts](./examples/stream/stream-multi-turn.ts)** - Multi-turn streaming
+- **[stream-with-context.ts](./examples/stream/stream-with-context.ts)** - Streaming with system prompts
+- **[stream-reasoning.ts](./examples/stream/stream-reasoning.ts)** - Reasoning model streaming (o1)
+- **[stream-deepseek-reasoning.ts](./examples/stream/stream-deepseek-reasoning.ts)** - DeepSeek-R1 streaming
+- **[stream-comparison.ts](./examples/stream/stream-comparison.ts)** - Performance comparison
 
 ### Providers
 
@@ -578,10 +636,11 @@ cp .env.example .env
 # Run examples with check:example script
 # Basic examples
 pnpm check:example examples/basic/simple-chat.ts
-pnpm check:example examples/basic/simple-chat-with-error.ts
 pnpm check:example examples/basic/multi-turn.ts
-pnpm check:example examples/basic/template-context.ts
-pnpm check:example examples/basic/event-hooks.ts
+
+# Streaming examples
+pnpm check:example examples/stream/simple-stream.ts
+pnpm check:example examples/stream/stream-comparison.ts
 
 # Provider examples
 pnpm check:example examples/providers/openai.ts

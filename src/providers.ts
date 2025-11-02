@@ -37,13 +37,13 @@ export const Providers = {
     model,
   }),
 
-  ai302: (model = 'gpt-4o-mini'): Provider => ({
+  ai302: (model = 'gpt-4.1-mini'): Provider => ({
     apiKey: process.env.AI_302_API_KEY || '',
     baseURL: process.env.AI_302_BASE_URL || 'https://api.302.ai/v1',
     model,
   }),
 
-  openrouter: (model = 'anthropic/claude-haiku-4.5'): Provider => ({
+  openrouter: (model = 'openai/gpt-4.1-mini'): Provider => ({
     apiKey: process.env.OPENROUTER_API_KEY || '',
     baseURL: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
     model,

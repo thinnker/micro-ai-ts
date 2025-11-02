@@ -74,7 +74,7 @@ export class Agent {
       reasoning: options.reasoning,
       reasoning_effort: options.reasoning_effort,
       timeout: options.timeout,
-      streaming: options.streaming,
+      stream: options.stream,
       tool_choice: options.tool_choice,
       onComplete: options.onComplete,
       onMessage: options.onMessage,

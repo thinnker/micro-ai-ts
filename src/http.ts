@@ -21,6 +21,7 @@ export interface HttpClientOptions {
   body?: Record<string, any>
   timeout?: number
   method?: HttpMethod
+  stream?: boolean
 }
 
 export interface HttpError extends Error {
@@ -41,7 +42,15 @@ const METHODS_WITH_BODY: HttpMethod[] = [
 ]
 
 async function request<T = any>(options: HttpClientOptions): Promise<T> {
-  const { baseURL, endpoint, headers, body, timeout, method = 'POST' } = options
+  const {
+    baseURL,
+    endpoint,
+    headers,
+    body,
+    timeout,
+    method = 'POST',
+    stream = false,
+  } = options
 
   const controller = new AbortController()
   const timeoutId = timeout
@@ -76,6 +85,10 @@ async function request<T = any>(options: HttpClientOptions): Promise<T> {
       }
       error.code = 'HTTP_ERROR'
       throw error
+    }
+
+    if (stream) {
+      return response as T
     }
 
     return await response.json()

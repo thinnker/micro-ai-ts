@@ -115,6 +115,22 @@ export type Response = {
   fullResponse?: Record<string, unknown>
 }
 
+export type StreamChunk = {
+  delta: string
+  fullContent: string
+  reasoning?: string
+  done: boolean
+  metadata?: Metadata
+  completion?: {
+    role: string
+    content: string
+    reasoning?: string
+    original: string
+  }
+}
+
+export type StreamResponse = AsyncGenerator<StreamChunk, void, unknown>
+
 export type ToolResponse = {
   toolName: string
   arguments: string
@@ -148,7 +164,7 @@ export interface MicroOptions {
   temperature?: number
   tools?: Tool[]
   tool_choice?: ToolChoice
-  streaming?: boolean
+  stream?: boolean
   reasoning?: boolean
   reasoning_effort?: ReasoningLevel
   timeout?: number
