@@ -4,7 +4,7 @@ A lightweight, beginner-friendly TypeScript library for building LLM-powered app
 
 ## ✨ Features
 
-- **🔌 Multi-Provider Support** - Unified OpenAI-compatible (`/chat/completions`) interface for OpenAI, OpenRouter, Anthropic (via compatible providers), Gemini, Groq, DeepSeek, xAI, 302.ai and more
+- **🔌 Multi-Provider Support** - Unified OpenAI-compatible (`/chat/completions`) interface for OpenAI, OpenRouter, Fireworks, Gemini, Anthropic (via compatible providers), Groq, DeepSeek, xAI, Mistral, Together, 302.ai and more
 - **🤖 Agentic Workflows** - Built-in Agent and Orchestrator classes for autonomous AI systems
 - **🛠️ Tool Calling** - Easy tool creation with automatic execution and Zod schema validation
 - **🧠 Reasoning Models** - First-class support for advanced reasoning models (o1, Gemini 2.5, DeepSeek-R1)
@@ -606,6 +606,7 @@ The library includes comprehensive examples organized by category.
 - **[groq.ts](./examples/providers/groq.ts)** - Groq Llama models
 - **[gemini.ts](./examples/providers/gemini.ts)** - Google Gemini
 - **[openrouter.ts](./examples/providers/openrouter.ts)** - OpenRouter
+- **[fireworks.ts](./examples/providers/fireworks.ts)** - Fireworks AI
 - **[ai302.ts](./examples/providers/ai302.ts)** - AI302
 - **[deepseek.ts](./examples/providers/deepseek.ts)** - DeepSeek
 
@@ -647,6 +648,7 @@ pnpm check:example examples/providers/openai.ts
 pnpm check:example examples/providers/groq.ts
 pnpm check:example examples/providers/gemini.ts
 pnpm check:example examples/providers/openrouter.ts
+pnpm check:example examples/providers/fireworks.ts
 pnpm check:example examples/providers/ai302.ts
 pnpm check:example examples/providers/deepseek.ts
 pnpm check:example examples/providers/grok.ts

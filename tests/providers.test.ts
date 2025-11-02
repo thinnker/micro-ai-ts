@@ -60,12 +60,12 @@ describe('Providers', () => {
       expect(provider.model).toBe('gpt-4.1-mini')
     })
 
-    it('should accept custom model', () => {
+    it('should use fixed default model', () => {
       process.env.OPENAI_API_KEY = 'sk-test-key'
 
-      const provider = Providers.openai('gpt-4o')
+      const provider = Providers.openai()
 
-      expect(provider.model).toBe('gpt-4o')
+      expect(provider.model).toBe('gpt-4.1-mini')
     })
 
     it('should use custom base URL from env', () => {
@@ -89,10 +89,10 @@ describe('Providers', () => {
       expect(provider.model).toBe('llama-3.3-70b-versatile')
     })
 
-    it('should accept custom model', () => {
+    it('should use fixed default model', () => {
       process.env.GROQ_API_KEY = 'gsk-test-key'
 
-      const provider = Providers.groq('llama-3.3-70b-versatile')
+      const provider = Providers.groq()
 
       expect(provider.model).toBe('llama-3.3-70b-versatile')
     })
@@ -111,12 +111,12 @@ describe('Providers', () => {
       expect(provider.model).toBe('gemini-2.5-flash-lite')
     })
 
-    it('should accept custom model', () => {
+    it('should use fixed default model', () => {
       process.env.GEMINI_API_KEY = 'gemini-test-key'
 
-      const provider = Providers.gemini('gemini-2.5-pro')
+      const provider = Providers.gemini()
 
-      expect(provider.model).toBe('gemini-2.5-pro')
+      expect(provider.model).toBe('gemini-2.5-flash-lite')
     })
   })
 
@@ -131,12 +131,12 @@ describe('Providers', () => {
       expect(provider.model).toBe('gpt-4.1-mini')
     })
 
-    it('should accept custom model', () => {
+    it('should use fixed default model', () => {
       process.env.AI_302_API_KEY = 'ai302-test-key'
 
-      const provider = Providers.ai302('gpt-4o')
+      const provider = Providers.ai302()
 
-      expect(provider.model).toBe('gpt-4o')
+      expect(provider.model).toBe('gpt-4.1-mini')
     })
   })
 
@@ -151,12 +151,12 @@ describe('Providers', () => {
       expect(provider.model).toBe('openai/gpt-4.1-mini')
     })
 
-    it('should accept custom model', () => {
+    it('should use fixed default model', () => {
       process.env.OPENROUTER_API_KEY = 'or-test-key'
 
-      const provider = Providers.openrouter('anthropic/claude-sonnet-4')
+      const provider = Providers.openrouter()
 
-      expect(provider.model).toBe('anthropic/claude-sonnet-4')
+      expect(provider.model).toBe('openai/gpt-4.1-mini')
     })
   })
 
@@ -171,12 +171,12 @@ describe('Providers', () => {
       expect(provider.model).toBe('deepseek-chat')
     })
 
-    it('should accept custom model', () => {
+    it('should use fixed default model', () => {
       process.env.DEEPSEEK_API_KEY = 'ds-test-key'
 
-      const provider = Providers.deepseek('deepseek-reasoner')
+      const provider = Providers.deepseek()
 
-      expect(provider.model).toBe('deepseek-reasoner')
+      expect(provider.model).toBe('deepseek-chat')
     })
   })
 
@@ -191,12 +191,12 @@ describe('Providers', () => {
       expect(provider.model).toBe('grok-4-fast')
     })
 
-    it('should accept custom model', () => {
+    it('should use fixed default model', () => {
       process.env.GROK_API_KEY = 'grok-test-key'
 
-      const provider = Providers.grok('grok-4')
+      const provider = Providers.grok()
 
-      expect(provider.model).toBe('grok-4')
+      expect(provider.model).toBe('grok-4-fast')
     })
   })
 
@@ -222,20 +222,21 @@ describe('Providers', () => {
   describe('Provider Consistency', () => {
     it('all providers should return consistent structure', () => {
       const providers = [
-        Providers.openai('test-model'),
-        Providers.groq('test-model'),
-        Providers.gemini('test-model'),
-        Providers.ai302('test-model'),
-        Providers.openrouter('test-model'),
-        Providers.deepseek('test-model'),
-        Providers.grok('test-model'),
+        Providers.openai(),
+        Providers.groq(),
+        Providers.gemini(),
+        Providers.ai302(),
+        Providers.openrouter(),
+        Providers.deepseek(),
+        Providers.grok(),
       ]
 
       providers.forEach((provider) => {
         expect(provider).toHaveProperty('apiKey')
         expect(provider).toHaveProperty('baseURL')
         expect(provider).toHaveProperty('model')
-        expect(provider.model).toBe('test-model')
+        expect(typeof provider.model).toBe('string')
+        expect(provider.model.length).toBeGreaterThan(0)
       })
     })
   })

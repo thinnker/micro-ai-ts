@@ -1,8 +1,8 @@
 export type Provider = {
   apiKey: string
   baseURL: string
-  headers?: Record<string, string>
   model: string
+  headers?: Record<string, string>
 }
 
 export type Tool = {

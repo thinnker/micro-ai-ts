@@ -60,4 +60,27 @@ export const Providers = {
     baseURL: process.env.GROK_BASE_URL || 'https://api.x.ai/v1',
     model,
   }),
+
+  fireworks: (
+    model = 'accounts/fireworks/models/llama4-maverick-instruct-basic'
+  ): Provider => ({
+    apiKey: process.env.FIREWORKS_API_KEY || '',
+    baseURL:
+      process.env.FIREWORKS_BASE_URL || 'https://api.fireworks.ai/inference/v1',
+    model,
+  }),
+
+  mistral: (model = 'mistral-large-latest'): Provider => ({
+    apiKey: process.env.MISTRAL_API_KEY || '',
+    baseURL: process.env.MISTRAL_BASE_URL || 'https://api.mistral.ai/v1',
+    model,
+  }),
+
+  together: (
+    model = 'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo'
+  ): Provider => ({
+    apiKey: process.env.TOGETHER_API_KEY || '',
+    baseURL: process.env.TOGETHER_BASE_URL || 'https://api.together.xyz/v1',
+    model,
+  }),
 }

@@ -29,6 +29,11 @@ async function main() {
       const totalTime = Date.now() - startStream
       console.log(`\n\nTime to first chunk: ${firstChunkTime}ms`)
       console.log(`Total time: ${totalTime}ms`)
+
+      console.log('Full content:', chunk.fullContent)
+      if (chunk.metadata) {
+        console.log('Metadata:', chunk.metadata)
+      }
     }
   }
 }

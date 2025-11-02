@@ -7,6 +7,7 @@ import type {
   Metadata,
   Response,
   StreamResponse,
+  MessageRole,
 } from './types'
 import { Providers } from './providers'
 import { httpClient } from './http'
@@ -590,7 +591,7 @@ export class Micro {
               const delta = parsed.choices?.[0]?.delta
 
               if (delta?.role) {
-                role = delta.role as 'assistant' | 'user' | 'system' | 'tool'
+                role = delta.role
               }
 
               if (delta?.content) {
@@ -622,7 +623,7 @@ export class Micro {
 
       // Add assistant message to history
       this.messages.push({
-        role: role as 'assistant' | 'user' | 'system' | 'tool',
+        role: role as MessageRole,
         content: fullContent,
       })
 
