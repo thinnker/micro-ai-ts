@@ -8,6 +8,8 @@ import type {
   Response,
   StreamResponse,
   MessageRole,
+  ModelCapabilities,
+  LlmParams,
 } from './types'
 import { Providers } from './providers'
 import { httpClient } from './http'
@@ -29,15 +31,24 @@ const Defaults = {
   baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
   providerName: 'openai',
   model: 'gpt-4.1-mini',
-  temperature: 0,
   defaultEndpointCompletionSuffix: '/chat/completions',
 }
 
 export class Micro {
-  private baseURL: string
-  private headers: Record<string, string>
-  private model: string
+  private readonly identifier: string
+  private readonly baseURL: string
+  private readonly headers: Record<string, string>
+  private readonly model: string
+  private readonly modelName: string
+  private readonly providerName: string
+  private readonly defaultProvider: Omit<Provider, 'model'>
+  private readonly capabilities: ModelCapabilities
+  private readonly debug: boolean
+  private readonly streamEnabled: boolean
+  private readonly timeout?: number
+
   private systemPrompt: string
+  private parsedSystemPrompt: string
   private messages: Message[]
   private context: Record<string, any>
   private prompt: string
@@ -45,14 +56,9 @@ export class Micro {
   private temperature?: number
   private tools?: MicroOptions['tools']
   private tool_choice?: MicroOptions['tool_choice']
-  private streamEnabled: boolean
-  private parsedSystemPrompt: string
-  private defaultProvider: Omit<Provider, 'model'>
-  private modelName: string
-  private providerName: string
-  private identifier: string
-  private timeout?: number
+  private reasoning: boolean
   private reasoning_effort?: ReasoningLevel
+  private override?: LlmParams & Record<string, any>
 
   private onComplete?: MicroOptions['onComplete']
   private onMessage?: MicroOptions['onMessage']
@@ -61,126 +67,129 @@ export class Micro {
   private onError?: MicroOptions['onError']
   private onToolCall?: MicroOptions['onToolCall']
 
-  private debug: boolean
-
-  private reasoning: boolean
-  private isReasoningModel: boolean
-  private isGemini25Reasoning: boolean
-  private isOpenAIReasoning: boolean
-  private isOpenAI5: boolean
-  private isGLMReasoning: boolean
-  private isQWQ: boolean
-  private isDeepseekReasoning: boolean
-  private isQwen3: boolean
-  private isMinimaxM2: boolean
-
   constructor(options: MicroOptions = {}) {
     this.identifier = randomId()
-    this.timeout = options?.timeout
+    this.timeout = options.timeout
+    this.debug = options.debug ?? false
+    this.streamEnabled = options.stream ?? false
 
-    this.modelName = stripModelName(options?.model || '') || Defaults.model
+    this.modelName = stripModelName(options.model || '') || Defaults.model
     this.providerName =
-      stripProviderName(options?.model || '') || Defaults.providerName
-
-    let providerConfig: Provider | undefined
-    if (this.providerName) {
-      const providerFn = Providers[this.providerName as keyof typeof Providers]
-      if (providerFn) {
-        providerConfig = providerFn(this.modelName)
-      }
-    }
-
-    this.defaultProvider = {
-      baseURL:
-        providerConfig?.baseURL ??
-        options?.provider?.baseURL ??
-        Defaults.baseURL,
-      apiKey:
-        providerConfig?.apiKey ?? options?.provider?.apiKey ?? Defaults.apiKey,
-      ...(options?.provider?.headers && {
-        headers: options.provider.headers,
-      }),
-    }
-
-    if (!this.defaultProvider.apiKey) {
-      throw new Error('API Key is required')
-    }
-
-    this.baseURL = this.defaultProvider.baseURL
-    this.headers = {
-      Authorization: `Bearer ${this.defaultProvider.apiKey}`,
-      'Content-Type': 'application/json',
-      ...this.defaultProvider.headers,
-    }
-
+      stripProviderName(options.model || '') || Defaults.providerName
     this.model = this.modelName
-    this.systemPrompt = options?.systemPrompt || ''
-    this.prompt = options?.prompt || ''
 
+    this.defaultProvider = this.initializeProvider(options)
+    this.baseURL = this.defaultProvider.baseURL
+    this.headers = this.buildHeaders()
+
+    this.capabilities = this.detectModelCapabilities()
+    this.reasoning = options.reasoning ?? this.capabilities.isReasoningModel
+    this.reasoning_effort = this.reasoning
+      ? (options.reasoning_effort ?? 'medium')
+      : undefined
+
+    this.systemPrompt = options.systemPrompt || ''
+    this.prompt = options.prompt || ''
     this.context = options.context ?? {}
     this.parsedSystemPrompt = this.systemPrompt
       ? parseTemplate(this.systemPrompt, this.context)
       : ''
+
     this.maxTokens = options.maxTokens
-    this.temperature =
-      options.temperature !== undefined
-        ? options.temperature
-        : Defaults.temperature
+    this.temperature = options.temperature
     this.tools = options.tools
     this.tool_choice = options.tool_choice
 
-    this.debug = options?.debug || false
-    this.streamEnabled = options?.stream || false
+    this.override = options.override
 
-    this.isOpenAI5 = this.model?.toLowerCase()?.includes('gpt-5')
-    this.isOpenAIReasoning =
-      this.model?.toLowerCase()?.includes('o1') ||
-      this.model?.toLowerCase()?.includes('o3') ||
-      this.model?.toLowerCase()?.includes('o4') ||
-      this.isOpenAI5
+    this.onComplete = options.onComplete
+    this.onMessage = options.onMessage
+    this.onRequest = options.onRequest
+    this.onResponseData = options.onResponseData
+    this.onError = options.onError
+    this.onToolCall = options.onToolCall
 
-    this.isGemini25Reasoning = this.model?.toLowerCase()?.includes('gemini-2.5')
-
-    this.isGLMReasoning = this.model?.toLowerCase()?.includes('glm-4.')
-    this.isQWQ = this.model?.toLowerCase()?.includes('qwq')
-    this.isDeepseekReasoning =
-      this.model?.toLowerCase()?.includes('deepseek-reasoner') ||
-      this.model?.toLowerCase()?.includes('deepseek-r1')
-    this.isQwen3 = this.model?.toLowerCase()?.includes('qwen3')
-    this.isMinimaxM2 = this.model?.toLowerCase()?.includes('-m2')
-
-    this.isReasoningModel =
-      this.isGemini25Reasoning ||
-      this.isOpenAIReasoning ||
-      this.isGLMReasoning ||
-      this.isQWQ ||
-      this.isDeepseekReasoning ||
-      this.isQwen3 ||
-      this.isMinimaxM2
-
-    this.reasoning = options?.reasoning || !!this.isReasoningModel
-    this.reasoning_effort = options.reasoning_effort ?? 'medium'
-
-    this.onComplete = options.onComplete || undefined
-    this.onMessage = options.onMessage || undefined
-    this.onRequest = options.onRequest || undefined
-    this.onResponseData = options.onResponseData || undefined
-    this.onError = options.onError || undefined
-    this.onToolCall = options.onToolCall || undefined
-
-    this.messages = options?.messages ?? []
+    this.messages = options.messages ?? []
     this.setSystemPrompt(this.parsedSystemPrompt)
 
-    if (this.debug) {
-      console.log('\n=============================================')
-      console.log('Micro INFO:')
-      console.log('=============================================')
-      console.log('IDENTIFIER:      ', this.identifier)
-      console.log('MODEL NAME:      ', this.modelName)
-      console.log('PROVIDER NAME:   ', this.providerName)
-      console.log('DEFAULT PROVIDER ', sanitizeProvider(this.defaultProvider))
-      console.log('=============================================\n')
+    if (this.debug) this.logDebugInfo()
+  }
+
+  private initializeProvider(options: MicroOptions): Omit<Provider, 'model'> {
+    const providerFn = Providers[this.providerName as keyof typeof Providers]
+    const providerConfig = providerFn?.(this.modelName)
+
+    const provider = {
+      baseURL:
+        providerConfig?.baseURL ??
+        options.provider?.baseURL ??
+        Defaults.baseURL,
+      apiKey:
+        providerConfig?.apiKey ?? options.provider?.apiKey ?? Defaults.apiKey,
+      ...(options.provider?.headers && { headers: options.provider.headers }),
     }
+
+    if (!provider.apiKey) {
+      throw new Error('API Key is required')
+    }
+
+    return provider
+  }
+
+  private buildHeaders(): Record<string, string> {
+    return {
+      Authorization: `Bearer ${this.defaultProvider.apiKey}`,
+      'Content-Type': 'application/json',
+      ...this.defaultProvider.headers,
+    }
+  }
+
+  private detectModelCapabilities(): ModelCapabilities {
+    const modelLower = this.model.toLowerCase()
+
+    const isOpenAI5 = modelLower.includes('gpt-5')
+    const isOpenAIReasoning =
+      ['o1', 'o3', 'o4'].some((v) => modelLower.includes(v)) || isOpenAI5
+    const isGemini25Reasoning = modelLower.includes('gemini-2.5')
+    const isGLMReasoning = modelLower.includes('glm-4.')
+    const isQWQ = modelLower.includes('qwq')
+    const isDeepseekReasoning =
+      modelLower.includes('deepseek-reasoner') ||
+      modelLower.includes('deepseek-r1')
+    const isQwen3 = modelLower.includes('qwen3')
+    const isMinimaxM2 = modelLower.includes('-m2')
+
+    const isReasoningModel =
+      isGemini25Reasoning ||
+      isOpenAIReasoning ||
+      isGLMReasoning ||
+      isQWQ ||
+      isDeepseekReasoning ||
+      isQwen3 ||
+      isMinimaxM2
+
+    return {
+      isOpenAI5,
+      isOpenAIReasoning,
+      isGemini25Reasoning,
+      isGLMReasoning,
+      isQWQ,
+      isDeepseekReasoning,
+      isQwen3,
+      isMinimaxM2,
+      isReasoningModel,
+    }
+  }
+
+  private logDebugInfo(): void {
+    console.log('\n=============================================')
+    console.log('Micro INFO:')
+    console.log('=============================================')
+    console.log('IDENTIFIER:      ', this.identifier)
+    console.log('MODEL NAME:      ', this.modelName)
+    console.log('PROVIDER NAME:   ', this.providerName)
+    console.log('DEFAULT PROVIDER ', sanitizeProvider(this.defaultProvider))
+    console.log('=============================================\n')
   }
 
   public getMetadata(): Metadata {
@@ -195,9 +204,9 @@ export class Micro {
       },
       timestamp: new Date().toISOString(),
       context: this.context,
-      ...(this.isReasoningModel && {
+      ...(this.capabilities.isReasoningModel && {
         isReasoningEnabled: this.reasoning,
-        isReasoningModel: this.isReasoningModel,
+        isReasoningModel: this.capabilities.isReasoningModel,
         reasoning_effort: this.reasoning_effort,
       }),
     }
@@ -210,7 +219,9 @@ export class Micro {
   public setSystemPrompt(prompt: string): void {
     if (!prompt) return
     this.parsedSystemPrompt = parseTemplate(prompt, this.context)
-    if (this.parsedSystemPrompt && !this.getSystemMessage().length) {
+
+    const hasSystemMessage = this.messages.some((msg) => msg.role === 'system')
+    if (this.parsedSystemPrompt && !hasSystemMessage) {
       this.messages.unshift({
         role: 'system',
         content: this.parsedSystemPrompt,
@@ -231,11 +242,11 @@ export class Micro {
   }
 
   public limitMessages(limit: number = 5): Message[] {
-    const systemPromptMessage = this.getSystemMessage()
-    const restOfMessages = this.getNonSystemMessages()
-    const limitMessages = takeRight(restOfMessages, limit)
-    const limitedHistory = [...systemPromptMessage, ...limitMessages]
-    this.messages = limitedHistory
+    const systemMessages = this.getSystemMessage()
+    const otherMessages = this.getNonSystemMessages()
+    const limitedMessages = takeRight(otherMessages, limit)
+
+    this.messages = [...systemMessages, ...limitedMessages]
     return this.messages
   }
 
@@ -251,106 +262,83 @@ export class Micro {
     const parsedPrompt = parseTemplate(prompt, this.context)
     this.prompt = parsedPrompt
 
-    if (bufferString && isBufferString(bufferString)) {
-      this.messages.push({
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: parsedPrompt,
-          },
-          {
-            type: 'image_url',
-            image_url: {
-              url: bufferString,
-            },
-          },
-        ],
-      })
-    } else {
-      this.messages.push({
-        role: 'user',
-        content: parsedPrompt,
-      })
-    }
+    const content =
+      bufferString && isBufferString(bufferString)
+        ? [
+            { type: 'text' as const, text: parsedPrompt },
+            { type: 'image_url' as const, image_url: { url: bufferString } },
+          ]
+        : parsedPrompt
 
-    if (this.onMessage) {
-      this.onMessage(this.messages)
-    }
+    this.messages.push({ role: 'user', content })
+    this.onMessage?.(this.messages)
   }
 
   public setAssistantMessage(prompt: string): this {
     const parsedPrompt = parseTemplate(prompt, this.context)
-
-    this.messages.push({
-      role: 'assistant',
-      content: parsedPrompt,
-    })
-
-    if (this.onMessage) {
-      this.onMessage(this.messages)
-    }
-
+    this.messages.push({ role: 'assistant', content: parsedPrompt })
+    this.onMessage?.(this.messages)
     return this
   }
 
-  private async makeRequest(
-    enableStream: boolean = false
-  ): Promise<Record<string, any> | Response> {
-    const requestBody: any = {
+  private buildRequestBody(enableStream: boolean): Record<string, any> {
+    let body: Record<string, any> = {
       model: this.model,
       messages: this.messages,
       stream: enableStream || this.streamEnabled,
     }
 
-    if (this.temperature) {
-      requestBody.temperature = this.temperature
+    if (this.temperature !== undefined) body.temperature = this.temperature
+    if (this.maxTokens) body.max_tokens = this.maxTokens
+
+    if (this.tools?.length) {
+      body.tools = this.tools.map((tool) => tool.schema)
+      if (this.tool_choice) body.tool_choice = this.tool_choice
     }
 
-    if (this.maxTokens) {
-      requestBody.max_tokens = this.maxTokens
+    if (this.reasoning && this.capabilities.isReasoningModel) {
+      this.applyReasoningConfig(body)
+    }
+    if (this.override) {
+      body = { ...body, ...this.override }
     }
 
-    if (this.tools && this.tools.length > 0) {
-      requestBody.tools = this.tools.map((tool) => tool.schema)
-      if (this.tool_choice) {
-        requestBody.tool_choice = this.tool_choice
+    return body
+  }
+
+  private applyReasoningConfig(body: Record<string, any>): void {
+    if (this.capabilities.isOpenAIReasoning) {
+      body.reasoning_effort = this.reasoning_effort
+      if (this.maxTokens) {
+        body.max_completion_tokens = this.maxTokens
+        delete body.max_tokens
       }
-    }
-
-    if (this.reasoning && this.isReasoningModel) {
-      if (this.isOpenAIReasoning) {
-        requestBody.reasoning_effort = this.reasoning_effort
-        if (this.maxTokens) {
-          requestBody.max_completion_tokens = this.maxTokens
-          delete requestBody.max_tokens
-        }
-      } else if (this.isGemini25Reasoning) {
-        const thinkingBudgetMap: Record<ReasoningLevel, number> = {
-          minimal: 2048,
-          low: 4096,
-          medium: 8192,
-          high: 16384,
-        }
-        requestBody.extra_body = {
-          google: {
-            thinking_config: {
-              thinking_budget:
-                thinkingBudgetMap[this.reasoning_effort || 'medium'],
-              include_thoughts: true,
-            },
+    } else if (this.capabilities.isGemini25Reasoning) {
+      const thinkingBudgetMap: Record<ReasoningLevel, number> = {
+        minimal: 2048,
+        low: 4096,
+        medium: 8192,
+        high: 16384,
+      }
+      body.extra_body = {
+        google: {
+          thinking_config: {
+            thinking_budget:
+              thinkingBudgetMap[this.reasoning_effort || 'medium'],
+            include_thoughts: true,
           },
-        }
-      } else if (this.isGLMReasoning) {
-        requestBody.thinking = {
-          type: 'enabled',
-        }
+        },
       }
+    } else if (this.capabilities.isGLMReasoning) {
+      body.thinking = { type: 'enabled' }
     }
+  }
 
-    if (this.onRequest) {
-      this.onRequest(requestBody)
-    }
+  private async makeRequest(
+    enableStream: boolean = false
+  ): Promise<Record<string, any> | Response> {
+    const requestBody = this.buildRequestBody(enableStream)
+    this.onRequest?.(requestBody)
 
     const data = await httpClient({
       baseURL: this.baseURL,
@@ -362,10 +350,7 @@ export class Micro {
       stream: enableStream || this.streamEnabled,
     })
 
-    if (this.onResponseData && !enableStream) {
-      this.onResponseData(data)
-    }
-
+    if (!enableStream) this.onResponseData?.(data)
     return data
   }
 
@@ -377,61 +362,130 @@ export class Micro {
 
     if (!tool) {
       const errorMessage = `Tool "${toolName}" not found`
-      if (this.onToolCall) {
-        this.onToolCall({
-          toolName,
-          arguments: toolArguments,
-          result: null,
-          error: errorMessage,
-        })
-      }
+      this.onToolCall?.({
+        toolName,
+        arguments: toolArguments,
+        result: null,
+        error: errorMessage,
+      })
       return errorMessage
     }
 
     try {
       const parsedArgs = JSON.parse(toolArguments)
       const result = await tool.execute(parsedArgs)
-
-      if (this.onToolCall) {
-        this.onToolCall({
-          toolName,
-          arguments: parsedArgs,
-          result,
-        })
-      }
-
+      this.onToolCall?.({ toolName, arguments: parsedArgs, result })
       return result
     } catch (error: any) {
       const errorMessage = `Error executing tool "${toolName}": ${error.message}`
-      if (this.onToolCall) {
-        this.onToolCall({
-          toolName,
-          arguments: toolArguments,
-          result: null,
-          error: errorMessage,
-        })
-      }
+      this.onToolCall?.({
+        toolName,
+        arguments: toolArguments,
+        result: null,
+        error: errorMessage,
+      })
       return errorMessage
     }
   }
 
   private async handleToolCalls(toolCalls: any[]): Promise<void> {
     for (const toolCall of toolCalls) {
-      const toolName = toolCall.function.name
-      const toolArguments = toolCall.function.arguments
-
-      const result = await this.executeTool(toolName, toolArguments)
+      const result = await this.executeTool(
+        toolCall.function.name,
+        toolCall.function.arguments
+      )
 
       this.messages.push({
         role: 'tool',
         tool_call_id: toolCall.id,
-        name: toolName,
+        name: toolCall.function.name,
         content: typeof result === 'string' ? result : JSON.stringify(result),
       })
 
-      if (this.onMessage) {
-        this.onMessage(this.messages)
-      }
+      this.onMessage?.(this.messages)
+    }
+  }
+
+  private extractReasoning(message: any): {
+    reasoning: string
+    content: string
+  } {
+    let reasoning = message?.reasoning || message?.reasoning_content || ''
+    let content = message?.content || ''
+
+    if (hasTag(content, 'thinking')) {
+      reasoning = extractInnerTag(content, 'thinking')
+      content = stripTag(content, 'thinking')
+    } else if (hasTag(content, 'thought')) {
+      reasoning = extractInnerTag(content, 'thought')
+      content = stripTag(content, 'thought')
+    }
+
+    return { reasoning, content }
+  }
+
+  private buildResponse(
+    responseData: Record<string, any>,
+    latencyMs: number,
+    reasoning: string,
+    content: string,
+    message: any
+  ): Response {
+    return {
+      metadata: {
+        id: this.identifier,
+        prompt: this.prompt,
+        providerName: this.providerName,
+        model: this.modelName,
+        tokensUsed: responseData.usage,
+        timing: {
+          latencyMs,
+          latencySeconds: latencyMs / 1000,
+        },
+        timestamp: new Date().toISOString(),
+        context: this.context,
+        isReasoningEnabled: this.reasoning,
+        isReasoningModel:
+          this.capabilities.isReasoningModel || reasoning.length > 0,
+        reasoning_effort: this.reasoning_effort,
+        hasThoughts: reasoning.length > 0,
+      },
+      fullResponse: responseData,
+      completion: {
+        role: message?.role || 'assistant',
+        content: content.trim(),
+        reasoning: reasoning.trim(),
+        original: message?.content || '',
+      },
+    }
+  }
+
+  private buildErrorResponse(error: any, latencyMs: number): Response {
+    return {
+      metadata: {
+        id: this.identifier,
+        prompt: this.prompt,
+        providerName: this.providerName,
+        model: this.modelName,
+        timing: {
+          latencyMs,
+          latencySeconds: latencyMs / 1000,
+        },
+        timestamp: new Date().toISOString(),
+        context: this.context,
+      },
+      completion: {
+        role: 'assistant',
+        content: '',
+        original: '',
+      },
+      error: {
+        type: error.code === 'ECONNABORTED' ? 'timeout' : 'api_error',
+        message: error.message,
+        status: error.response?.status,
+        code: error.code,
+        details: error.response?.data,
+      },
     }
   }
 
@@ -440,115 +494,35 @@ export class Micro {
 
     try {
       const responseData = (await this.makeRequest()) as Record<string, any>
-
-      const choice = responseData.choices?.[0]
-      const message = choice?.message
+      const message = responseData.choices?.[0]?.message
 
       if (message) {
         this.messages.push(message)
-
-        if (this.onMessage) {
-          this.onMessage(this.messages)
-        }
+        this.onMessage?.(this.messages)
       }
 
-      if (message?.tool_calls && message.tool_calls.length > 0) {
+      if (message?.tool_calls?.length) {
         await this.handleToolCalls(message.tool_calls)
         return this.invoke()
       }
 
-      const endTime = Date.now()
-      const latencyMs = endTime - startTime
+      const latencyMs = Date.now() - startTime
+      const { reasoning, content } = this.extractReasoning(message)
+      const response = this.buildResponse(
+        responseData,
+        latencyMs,
+        reasoning,
+        content,
+        message
+      )
 
-      let reasoning = ''
-      let content = message?.content || ''
-
-      // Reasoning detection
-      if (message?.reasoning) {
-        reasoning = message?.reasoning
-      }
-
-      if (message?.reasoning_content) {
-        reasoning = message?.reasoning_content
-      }
-
-      if (hasTag(content, 'thinking')) {
-        reasoning = extractInnerTag(content, 'thinking')
-        content = stripTag(content, 'thinking')
-      }
-
-      if (hasTag(content, 'thought')) {
-        reasoning = extractInnerTag(content, 'thought')
-        content = stripTag(content, 'thought')
-      }
-
-      const response: Response = {
-        metadata: {
-          id: this.identifier,
-          prompt: this.prompt,
-          providerName: this.providerName,
-          model: this.modelName,
-          tokensUsed: responseData.usage,
-          timing: {
-            latencyMs,
-            latencySeconds: latencyMs / 1000,
-          },
-          timestamp: new Date().toISOString(),
-          context: this.context,
-          isReasoningEnabled: this.reasoning,
-          isReasoningModel: this.isReasoningModel || reasoning?.length > 0,
-          reasoning_effort: this.reasoning_effort,
-          hasThoughts: reasoning?.length > 0,
-        },
-        fullResponse: responseData,
-        completion: {
-          role: message?.role || 'assistant',
-          content: content.trim(),
-          reasoning: reasoning.trim(),
-          original: message?.content || '',
-        },
-      }
-
-      if (this.onComplete) {
-        this.onComplete(response, this.messages)
-      }
-
+      this.onComplete?.(response, this.messages)
       return response
     } catch (error: any) {
-      const endTime = Date.now()
-      const latencyMs = endTime - startTime
+      const latencyMs = Date.now() - startTime
+      const errorResponse = this.buildErrorResponse(error, latencyMs)
 
-      const errorResponse: Response = {
-        metadata: {
-          id: this.identifier,
-          prompt: this.prompt,
-          providerName: this.providerName,
-          model: this.modelName,
-          timing: {
-            latencyMs,
-            latencySeconds: latencyMs / 1000,
-          },
-          timestamp: new Date().toISOString(),
-          context: this.context,
-        },
-        completion: {
-          role: 'assistant',
-          content: '',
-          original: '',
-        },
-        error: {
-          type: error.code === 'ECONNABORTED' ? 'timeout' : 'api_error',
-          message: error.message,
-          status: error.response?.status,
-          code: error.code,
-          details: error.response?.data,
-        },
-      }
-
-      if (this.onError) {
-        this.onError(errorResponse.error)
-      }
-
+      this.onError?.(errorResponse.error)
       return Promise.reject(errorResponse.error)
     }
   }
@@ -558,14 +532,36 @@ export class Micro {
     return this.invoke()
   }
 
+  private buildStreamMetadata(
+    latencyMs: number,
+    tokensUsed: any,
+    reasoning: string
+  ): Metadata {
+    return {
+      id: this.identifier,
+      prompt: this.prompt,
+      providerName: this.providerName,
+      model: this.modelName,
+      tokensUsed,
+      timing: {
+        latencyMs,
+        latencySeconds: latencyMs / 1000,
+      },
+      timestamp: new Date().toISOString(),
+      context: this.context,
+      isReasoningEnabled: this.reasoning,
+      isReasoningModel: this.capabilities.isReasoningModel,
+      reasoning_effort: this.reasoning_effort,
+      hasThoughts: reasoning.length > 0,
+    }
+  }
+
   private async *processStream(
     response: Response,
     startTime: number
   ): StreamResponse {
     const reader = (response as any).body?.getReader()
-    if (!reader) {
-      throw new Error('Stream not available')
-    }
+    if (!reader) throw new Error('Stream not available')
 
     const decoder = new TextDecoder()
     let fullContent = ''
@@ -577,10 +573,7 @@ export class Micro {
     try {
       while (true) {
         const { done, value } = await reader.read()
-
-        if (done) {
-          break
-        }
+        if (done) break
 
         buffer += decoder.decode(value, { stream: true })
         const lines = buffer.split('\n')
@@ -588,37 +581,30 @@ export class Micro {
 
         for (const line of lines) {
           const trimmedLine = line.trim()
-          if (!trimmedLine || trimmedLine === 'data: [DONE]') {
-            continue
-          }
+          if (!trimmedLine || trimmedLine === 'data: [DONE]') continue
 
           if (trimmedLine.startsWith('data: ')) {
             try {
-              const jsonStr = trimmedLine.slice(6)
-              const parsed = JSON.parse(jsonStr)
+              const parsed = JSON.parse(trimmedLine.slice(6))
               const delta = parsed.choices?.[0]?.delta
 
-              if (delta?.role) {
-                role = delta.role
-              }
+              if (delta?.role) role = delta.role
 
-              // Yield if there's either content or reasoning
-              if (delta.content || delta.reasoning || delta.reasoning_content) {
-                fullContent += delta.content
-                reasoning += delta.reasoning || delta.reasoning_content
+              const deltaReasoning =
+                delta?.reasoning || delta?.reasoning_content
+              if (delta?.content || deltaReasoning) {
+                fullContent += delta.content || ''
+                reasoning += deltaReasoning || ''
 
                 yield {
                   delta: delta.content,
-                  reasoning: delta.reasoning || delta.reasoning_content,
+                  reasoning: deltaReasoning,
                   fullContent,
                   done: false,
                 }
               }
 
-              // Capture token usage when available (usually in the final chunk)
-              if (parsed.usage) {
-                tokensUsed = parsed.usage || {}
-              }
+              if (parsed.usage) tokensUsed = parsed.usage
             } catch {
               // Skip invalid JSON
             }
@@ -626,37 +612,15 @@ export class Micro {
         }
       }
 
-      // Add assistant message to history
-      this.messages.push({
-        role: role as MessageRole,
-        content: fullContent,
-      })
+      this.messages.push({ role: role as MessageRole, content: fullContent })
+      this.onMessage?.(this.messages)
 
-      if (this.onMessage) {
-        this.onMessage(this.messages)
-      }
-
-      const endTime = Date.now()
-      const latencyMs = endTime - startTime
-
-      const metadata: Metadata = {
-        id: this.identifier,
-        prompt: this.prompt,
-        providerName: this.providerName,
-        model: this.modelName,
+      const latencyMs = Date.now() - startTime
+      const metadata = this.buildStreamMetadata(
+        latencyMs,
         tokensUsed,
-        timing: {
-          latencyMs,
-          latencySeconds: latencyMs / 1000,
-        },
-        timestamp: new Date().toISOString(),
-        context: this.context,
-        isReasoningEnabled: this.reasoning,
-        isReasoningModel: this.isReasoningModel,
-        reasoning_effort: this.reasoning_effort,
-        hasThoughts: reasoning.length > 0,
-      }
-
+        reasoning
+      )
       const completion = {
         role,
         content: fullContent.trim(),
@@ -664,16 +628,9 @@ export class Micro {
         original: fullContent,
       }
 
-      const finalResponse: Response = {
-        metadata,
-        completion,
-      }
+      const finalResponse: Response = { metadata, completion }
+      this.onComplete?.(finalResponse, this.messages)
 
-      if (this.onComplete) {
-        this.onComplete(finalResponse, this.messages)
-      }
-
-      // Yield final chunk with metadata and completion
       yield {
         delta: '',
         fullContent: fullContent.trim(),
@@ -683,37 +640,10 @@ export class Micro {
         completion,
       }
     } catch (error: any) {
-      const endTime = Date.now()
-      const latencyMs = endTime - startTime
+      const latencyMs = Date.now() - startTime
+      const errorResponse = this.buildErrorResponse(error, latencyMs)
 
-      const errorResponse: Response = {
-        metadata: {
-          id: this.identifier,
-          prompt: this.prompt,
-          providerName: this.providerName,
-          model: this.modelName,
-          timing: {
-            latencyMs,
-            latencySeconds: latencyMs / 1000,
-          },
-          timestamp: new Date().toISOString(),
-          context: this.context,
-        },
-        completion: {
-          role: 'assistant',
-          content: '',
-          original: '',
-        },
-        error: {
-          type: 'api_error',
-          message: error.message,
-        },
-      }
-
-      if (this.onError) {
-        this.onError(errorResponse.error)
-      }
-
+      this.onError?.(errorResponse.error)
       throw errorResponse.error
     }
   }
@@ -723,47 +653,16 @@ export class Micro {
     bufferString?: string
   ): Promise<StreamResponse> {
     this.setUserMessage(prompt, bufferString)
-
     const startTime = Date.now()
 
     try {
       const response = await this.makeRequest(true)
       return this.processStream(response as Response, startTime)
     } catch (error: any) {
-      const endTime = Date.now()
-      const latencyMs = endTime - startTime
+      const latencyMs = Date.now() - startTime
+      const errorResponse = this.buildErrorResponse(error, latencyMs)
 
-      const errorResponse: Response = {
-        metadata: {
-          id: this.identifier,
-          prompt: this.prompt,
-          providerName: this.providerName,
-          model: this.modelName,
-          timing: {
-            latencyMs,
-            latencySeconds: latencyMs / 1000,
-          },
-          timestamp: new Date().toISOString(),
-          context: this.context,
-        },
-        completion: {
-          role: 'assistant',
-          content: '',
-          original: '',
-        },
-        error: {
-          type: error.code === 'ECONNABORTED' ? 'timeout' : 'api_error',
-          message: error.message,
-          status: error.response?.status,
-          code: error.code,
-          details: error.response?.data,
-        },
-      }
-
-      if (this.onError) {
-        this.onError(errorResponse.error)
-      }
-
+      this.onError?.(errorResponse.error)
       throw errorResponse.error
     }
   }

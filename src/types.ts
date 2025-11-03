@@ -188,3 +188,15 @@ export type MicroOptions = {
   onError?: OnErrorResponse
   onToolCall?: OnToolCall
 } & LlmParams
+
+export type ModelCapabilities = {
+  isOpenAI5: boolean
+  isOpenAIReasoning: boolean
+  isGemini25Reasoning: boolean
+  isGLMReasoning: boolean
+  isQWQ: boolean
+  isDeepseekReasoning: boolean
+  isQwen3: boolean
+  isMinimaxM2: boolean
+  isReasoningModel: boolean
+}
