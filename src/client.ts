@@ -565,6 +565,7 @@ export class Micro {
     let reasoning = ''
     let role = 'assistant'
     let buffer = ''
+    let tokensUsed: any = undefined
 
     try {
       while (true) {
@@ -603,6 +604,11 @@ export class Micro {
                   done: false,
                 }
               }
+
+              // Capture token usage when available (usually in the final chunk)
+              if (parsed.usage) {
+                tokensUsed = parsed.usage || {}
+              }
             } catch {
               // Skip invalid JSON
             }
@@ -639,6 +645,7 @@ export class Micro {
         prompt: this.prompt,
         providerName: this.providerName,
         model: this.modelName,
+        tokensUsed,
         timing: {
           latencyMs,
           latencySeconds: latencyMs / 1000,

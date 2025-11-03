@@ -276,8 +276,12 @@ const calculatorTool = createTool(
 
 Stream responses token-by-token for real-time output. The `.stream()` method automatically sets `stream: true` and returns an async generator.
 
+**Please note:**
+
+- Not all providers provide `usage` key, with token count on streaming. Providers like OpenAI, Gemini are some that dont, but same models on OpenRouter or Deepseek will provide this. Its a trial and error.
+
 ```typescript
-const client = new Micro({ model: 'openai:gpt-4o-mini' })
+const client = new Micro({ model: 'openrouter:openai/gpt-5-nano' })
 
 // Stream a response
 const stream = await client.stream('Write a short poem about TypeScript')
@@ -290,6 +294,11 @@ for await (const chunk of stream) {
     // Final chunk contains complete response and metadata
     console.log('\n\nComplete response:', chunk.fullContent)
     console.log('Latency:', chunk.metadata.timing.latencyMs, 'ms')
+
+    // Access token usage information
+    if (chunk.metadata?.tokensUsed) {
+      console.log('Tokens used:', chunk.metadata.tokensUsed.total_tokens)
+    }
 
     // For reasoning models, access the thinking process
     if (chunk.reasoning) {
@@ -594,6 +603,8 @@ The library includes comprehensive examples organized by category.
 ### Streaming
 
 - **[simple-stream.ts](./examples/stream/simple-stream.ts)** - Basic streaming
+- **[simple-streaming-tokens.ts](./examples/stream/simple-streaming-tokens.ts)** - Basic streaming with token usage
+- **[streaming-with-tokens.ts](./examples/stream/streaming-with-tokens.ts)** - Advanced streaming with token usage and cost estimation
 - **[stream-multi-turn.ts](./examples/stream/stream-multi-turn.ts)** - Multi-turn streaming
 - **[stream-with-context.ts](./examples/stream/stream-with-context.ts)** - Streaming with system prompts
 - **[stream-reasoning.ts](./examples/stream/stream-reasoning.ts)** - Reasoning model streaming (o1)
@@ -641,6 +652,8 @@ pnpm check:example examples/basic/multi-turn.ts
 
 # Streaming examples
 pnpm check:example examples/stream/simple-stream.ts
+pnpm check:example examples/stream/simple-streaming-tokens.ts
+pnpm check:example examples/stream/streaming-with-tokens.ts
 pnpm check:example examples/stream/stream-comparison.ts
 
 # Provider examples

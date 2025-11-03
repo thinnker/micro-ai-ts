@@ -145,7 +145,7 @@ export function cleanEmptyList(array: string[]): string[] {
 export function microlog(label: string, ...args: any[]): void {
   console.log(`\n${label}`)
   console.log('='.repeat(50))
-  console.log(...args)
+  console.log(JSON.stringify({ ...args }, null, 2))
   console.log('='.repeat(50) + '\n')
 }
 
