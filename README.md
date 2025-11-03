@@ -19,13 +19,13 @@ A lightweight, beginner-friendly TypeScript library for building LLM-powered app
 
 ```bash
 # Using npm
-npm install micro-ai-ts
+npm install git+https://github.com/thinnker/micro-ai-ts.git
 
 # Using pnpm
-pnpm add micro-ai-ts
+pnpm add git+https://github.com/thinnker/micro-ai-ts.git
 
 # Using yarn
-yarn add micro-ai-ts
+yarn add git+https://github.com/thinnker/micro-ai-ts.git
 ```
 
 ## 🚀 Quick Start

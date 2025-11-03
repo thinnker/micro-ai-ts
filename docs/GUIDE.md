@@ -137,11 +137,11 @@ Let's build a simple chatbot step by step.
 ### Step 1: Install Micro AI
 
 ```bash
-npm install micro-ai-ts
+npm install git+https://github.com/thinnker/micro-ai-ts.git
 # or
-pnpm add micro-ai-ts
+pnpm add git+https://github.com/thinnker/micro-ai-ts.git
 # or
-yarn add micro-ai-ts
+yarn add git+https://github.com/thinnker/micro-ai-ts.git
 ```
 
 ### Step 2: Get an API Key
