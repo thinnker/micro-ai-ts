@@ -424,127 +424,25 @@ client.context = { role: 'teacher', background: 'Explain concepts simply.' }
 
 ### Vision Support
 
-Send images to multimodal models:
+Send images to multimodal models using base64-encoded data URLs:
 
 ```typescript
-import { encodeImageToBufferString } from 'micro-ai-ts'
+import fs from 'fs'
 
-const bufferString = await encodeImageToBufferString('./image.png')
+// Read image and convert to base64 data URL
+const imageBuffer = fs.readFileSync('./image.png')
+const base64Image = imageBuffer.toString('base64')
+const bufferString = `data:image/png;base64,${base64Image}`
+
 const response = await client.chat("What's in this image?", bufferString)
 ```
 
-## 📚 API Reference
+## 📚 Documentation
 
-### Micro Options
-
-```typescript
-interface MicroOptions {
-  model?: string // Format: "provider:model-name"
-  provider?: Provider // Custom provider config
-  systemPrompt?: string // Initial system instructions
-  prompt?: string // Initial user prompt
-  messages?: Message[] // Pre-existing conversation
-  context?: Record<string, any> // Template variables
-  maxTokens?: number // Max tokens in response
-  temperature?: number // 0.0 (deterministic) to 1.0 (creative)
-  tools?: Tool[] // Available tools
-  tool_choice?: ToolChoice // Tool selection strategy
-  stream?: boolean // Enable stream (not yet implemented)
-  reasoning?: boolean // Enable reasoning models
-  reasoning_effort?: 'minimal' | 'low' | 'medium' | 'high'
-  timeout?: number // Request timeout in ms
-  debug?: boolean // Enable debug logging
-
-  // Event hooks
-  onComplete?: (result: Response) => void
-  onMessage?: (messages: Message[]) => void
-  onRequest?: (request: any) => void
-  onResponseData?: (response: any) => void
-  onError?: (error: ErrorPayload) => void
-  onToolCall?: (toolResponse: ToolResponse) => void
-}
-```
-
-### Micro Methods
-
-```typescript
-class Micro {
-  // Core methods
-  chat(prompt: string, bufferString?: string): Promise<Response>
-  invoke(): Promise<Response>
-
-  // Message management
-  setUserMessage(prompt: string, bufferString?: string): void
-  setAssistantMessage(prompt: string): Micro
-  setSystemPrompt(prompt: string): void
-  getMessages(): Message[]
-  setMessages(messages: Message[]): void
-  flushAllMessages(): void
-  limitMessages(limit: number): Message[]
-
-  // Metadata
-  getMetadata(): Metadata
-  getSystemPrompt(): string
-}
-```
-
-### Agent Options
-
-```typescript
-interface AgentOptions extends Omit<MicroOptions, 'prompt'> {
-  name: string // Agent role name
-  background: string // Agent's purpose and behavior
-  handoffs?: Agent[] // Sub-agents for delegation
-}
-```
-
-### Agent Methods
-
-```typescript
-class Agent {
-  // Core methods
-  chat(prompt: string): Promise<Response>
-  invoke(): Promise<Response>
-
-  // Message management
-  addPrompt(msg: string): void
-  addAssistantPrompt(msg: string): void
-  getMessages(): Message[]
-  getMetadata(): Metadata
-
-  // Static factory
-  static create(options: AgentOptions): Agent
-}
-```
-
-### Response Structure
-
-```typescript
-interface Response {
-  metadata: {
-    prompt: string
-    providerName: string
-    model: string
-    tokensUsed?: TokenUsage
-    timing: {
-      latencyMs: number
-      latencySeconds: number
-    }
-    timestamp: string
-    context: Record<string, any>
-    isReasoningEnabled?: boolean
-    isReasoningModel?: boolean
-    reasoning_effort?: ReasoningLevel
-    hasThoughts?: boolean
-  }
-  completion: {
-    role: string
-    content: string // Final answer
-    reasoning?: string // Thinking process (reasoning models)
-    original: string // Raw response
-  }
-}
-```
+- **[API Reference](./docs/API.md)** - Complete API documentation with detailed type definitions
+- **[Beginner's Guide](./docs/GUIDE.md)** - Step-by-step tutorial for getting started (coming soon)
+- **[Streaming Guide](./docs/STREAMING.md)** - Detailed streaming documentation
+- **[Examples](./examples/)** - Working code examples for common use cases
 
 ## 🎣 Event Hooks
 
@@ -691,12 +589,6 @@ pnpm dlx tsx examples/basic/simple-chat.ts
 pnpm dlx tsx examples/agent/calculator/calculator.ts
 pnpm dlx tsx examples/orchestrator/customer-service.ts
 ```
-
-## 📖 Documentation
-
-- **[Beginner's Guide](./docs/GUIDE.md)** - Step-by-step tutorial for getting started (coming soon)
-- **[Examples](./examples/)** - Working code examples for common use cases
-- **[API Reference](#-api-reference)** - Complete API documentation
 
 ## 🛠️ Development
 
