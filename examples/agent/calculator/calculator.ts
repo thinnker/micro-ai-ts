@@ -16,7 +16,18 @@ async function main() {
   )
 
   microlog('Response', response.completion.content)
-  microlog('Tokens', response.metadata.tokensUsed?.total_tokens || 'N/A')
+  console.log(
+    'Input Tokens',
+    response.metadata.tokensUsed?.prompt_tokens || 'N/A'
+  )
+  console.log(
+    'Output Tokens',
+    response.metadata.tokensUsed?.completion_tokens || 'N/A'
+  )
+  console.log(
+    'Total Tokens',
+    response.metadata.tokensUsed?.total_tokens || 'N/A'
+  )
 }
 
 main().catch(console.error)

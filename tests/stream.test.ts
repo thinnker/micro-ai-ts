@@ -8,7 +8,7 @@ describe('Micro Stream', () => {
     'should stream responses token by token',
     async () => {
       const micro = new Micro({
-        model: 'openrouter:openai/gpt-oss-20b:free',
+        model: 'openrouter:openai/gpt-oss-20b',
       })
 
       const stream = await micro.stream('Count from 1 to 3')
@@ -36,7 +36,7 @@ describe('Micro Stream', () => {
     'should maintain conversation history with streaming',
     async () => {
       const micro = new Micro({
-        model: 'openrouter:openai/gpt-oss-20b:free',
+        model: 'openrouter:openai/gpt-oss-20b',
       })
 
       const stream1 = await micro.stream('What is 2+2?')
@@ -63,7 +63,7 @@ describe('Micro Stream', () => {
     'should handle streaming with system prompt',
     async () => {
       const micro = new Micro({
-        model: 'openrouter:openai/gpt-oss-20b:free',
+        model: 'openrouter:openai/gpt-oss-20b',
         systemPrompt: 'You are a helpful assistant.',
       })
 
@@ -91,7 +91,7 @@ describe('Micro Stream', () => {
       const onComplete = vi.fn()
 
       const micro = new Micro({
-        model: 'openrouter:openai/gpt-oss-20b:free',
+        model: 'openrouter:openai/gpt-oss-20b',
         onComplete,
       })
 
@@ -111,7 +111,7 @@ describe('Micro Stream', () => {
     'should extract reasoning from reasoning models',
     async () => {
       const micro = new Micro({
-        model: 'openrouter:openai/gpt-oss-20b:free',
+        model: 'openrouter:openai/gpt-oss-20b',
         reasoning: true,
       })
 
