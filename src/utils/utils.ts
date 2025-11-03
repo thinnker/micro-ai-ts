@@ -26,12 +26,21 @@ export function parseTemplate(
 
 /**
  * Extract model name from "provider:model" format
- * @param modelString - Full model string (e.g., "openai:gpt-4.1-mini")
+ * @param modelString - Full model string (e.g., "openai:gpt-4.1-mini","openai:gpt-4.1-mini:free")
  * @returns Model name only (e.g., "gpt-4o-mini")
  */
 export function stripModelName(modelString: string): string {
   const parts = modelString.split(':')
-  return parts.length > 1 ? (parts[1] ?? modelString) : modelString
+
+  if (parts.length === 2) {
+    return parts[1] || ''
+  }
+
+  if (parts.length === 3) {
+    return `${parts[1]}:${parts[2]}`
+  }
+
+  return modelString
 }
 
 /**

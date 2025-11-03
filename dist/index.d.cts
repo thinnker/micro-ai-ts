@@ -198,6 +198,7 @@ declare class Micro {
     private isQWQ;
     private isDeepseekReasoning;
     private isQwen3;
+    private isMinimaxM2;
     constructor(options?: MicroOptions);
     getMetadata(): Metadata;
     getSystemPrompt(): string;

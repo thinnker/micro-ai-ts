@@ -28,7 +28,7 @@ const Defaults = {
   apiKey: process.env.OPENAI_API_KEY || '',
   baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
   providerName: 'openai',
-  model: 'gpt-4o-mini',
+  model: 'gpt-4.1-mini',
   temperature: 0,
   defaultEndpointCompletionSuffix: '/chat/completions',
 }
@@ -72,6 +72,7 @@ export class Micro {
   private isQWQ: boolean
   private isDeepseekReasoning: boolean
   private isQwen3: boolean
+  private isMinimaxM2: boolean
 
   constructor(options: MicroOptions = {}) {
     this.identifier = randomId()
@@ -146,6 +147,7 @@ export class Micro {
       this.model?.toLowerCase()?.includes('deepseek-reasoner') ||
       this.model?.toLowerCase()?.includes('deepseek-r1')
     this.isQwen3 = this.model?.toLowerCase()?.includes('qwen3')
+    this.isMinimaxM2 = this.model?.toLowerCase()?.includes('-m2')
 
     this.isReasoningModel =
       this.isGemini25Reasoning ||
@@ -153,7 +155,8 @@ export class Micro {
       this.isGLMReasoning ||
       this.isQWQ ||
       this.isDeepseekReasoning ||
-      this.isQwen3
+      this.isQwen3 ||
+      this.isMinimaxM2
 
     this.reasoning = options?.reasoning || !!this.isReasoningModel
     this.reasoning_effort = options.reasoning_effort ?? 'medium'
@@ -459,18 +462,24 @@ export class Micro {
 
       let reasoning = ''
       let content = message?.content || ''
-      let hasThoughts = false
 
-      if (this.reasoning && this.isReasoningModel && content) {
-        if (hasTag(content, 'thinking')) {
-          reasoning = extractInnerTag(content, 'thinking')
-          content = stripTag(content, 'thinking')
-          hasThoughts = true
-        } else if (hasTag(content, 'think')) {
-          reasoning = extractInnerTag(content, 'think')
-          content = stripTag(content, 'think')
-          hasThoughts = true
-        }
+      // Reasoning detection
+      if (message?.reasoning) {
+        reasoning = message?.reasoning
+      }
+
+      if (message?.reasoning_content) {
+        reasoning = message?.reasoning_content
+      }
+
+      if (hasTag(content, 'thinking')) {
+        reasoning = extractInnerTag(content, 'thinking')
+        content = stripTag(content, 'thinking')
+      }
+
+      if (hasTag(content, 'thought')) {
+        reasoning = extractInnerTag(content, 'thought')
+        content = stripTag(content, 'thought')
       }
 
       const response: Response = {
@@ -486,12 +495,10 @@ export class Micro {
           },
           timestamp: new Date().toISOString(),
           context: this.context,
-          ...(this.isReasoningModel && {
-            isReasoningEnabled: this.reasoning,
-            isReasoningModel: this.isReasoningModel,
-            reasoning_effort: this.reasoning_effort,
-            hasThoughts,
-          }),
+          isReasoningEnabled: this.reasoning,
+          isReasoningModel: this.isReasoningModel || reasoning?.length > 0,
+          reasoning_effort: this.reasoning_effort,
+          hasThoughts: reasoning?.length > 0,
         },
         fullResponse: responseData,
         completion: {
@@ -595,11 +602,14 @@ export class Micro {
                 role = delta.role
               }
 
-              if (delta?.content) {
+              // Yield if there's either content or reasoning
+              if (delta.content || delta.reasoning || delta.reasoning_content) {
                 fullContent += delta.content
+                reasoning += delta.reasoning || delta.reasoning_content
 
                 yield {
                   delta: delta.content,
+                  reasoning: delta.reasoning || delta.reasoning_content,
                   fullContent,
                   done: false,
                 }
@@ -613,17 +623,6 @@ export class Micro {
               // Skip invalid JSON
             }
           }
-        }
-      }
-
-      // Extract reasoning if present
-      if (this.reasoning && this.isReasoningModel && fullContent) {
-        if (hasTag(fullContent, 'thinking')) {
-          reasoning = extractInnerTag(fullContent, 'thinking')
-          fullContent = stripTag(fullContent, 'thinking')
-        } else if (hasTag(fullContent, 'think')) {
-          reasoning = extractInnerTag(fullContent, 'think')
-          fullContent = stripTag(fullContent, 'think')
         }
       }
 
@@ -652,12 +651,10 @@ export class Micro {
         },
         timestamp: new Date().toISOString(),
         context: this.context,
-        ...(this.isReasoningModel && {
-          isReasoningEnabled: this.reasoning,
-          isReasoningModel: this.isReasoningModel,
-          reasoning_effort: this.reasoning_effort,
-          hasThoughts: reasoning.length > 0,
-        }),
+        isReasoningEnabled: this.reasoning,
+        isReasoningModel: this.isReasoningModel,
+        reasoning_effort: this.reasoning_effort,
+        hasThoughts: reasoning.length > 0,
       }
 
       const completion = {
