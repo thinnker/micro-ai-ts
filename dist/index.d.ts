@@ -253,6 +253,7 @@ declare class Agent {
     getMetadata(): Metadata;
     static create(options: AgentOptions): Agent;
 }
+
 declare class Orchestrator extends Agent {
     constructor(options: AgentOptions);
     static create(options: AgentOptions): Orchestrator;

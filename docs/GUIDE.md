@@ -428,6 +428,50 @@ await orchestrator.chat(
 // Orchestrator will coordinate between all three agents
 ```
 
+### Real-World Orchestrator Examples
+
+Here are some practical orchestrator patterns you can use:
+
+**Travel Agency System:**
+Coordinate flight booking, hotel reservations, and travel advice agents to provide comprehensive travel planning.
+
+```typescript
+const travelOrchestrator = Orchestrator.create({
+  name: 'Travel Agency Manager',
+  background: 'Route travel requests to specialized agents',
+  handoffs: [flightAgent, hotelAgent, advisorAgent],
+})
+```
+
+**Content Creation Team:**
+Manage blog writers, social media specialists, SEO experts, and copy editors working together.
+
+```typescript
+const contentDirector = Orchestrator.create({
+  name: 'Content Director',
+  background: 'Coordinate content creation workflow',
+  handoffs: [blogWriter, socialMediaExpert, seoExpert, copyEditor],
+})
+```
+
+**Healthcare Triage:**
+Route health questions to appropriate specialists (general practitioner, mental health, nutrition, fitness).
+
+```typescript
+const healthcareOrchestrator = Orchestrator.create({
+  name: 'Healthcare Triage Coordinator',
+  background: 'Route health questions to appropriate specialists',
+  handoffs: [
+    generalPractitioner,
+    mentalHealthCounselor,
+    nutritionist,
+    fitnessCoach,
+  ],
+})
+```
+
+See the [orchestrator examples](../examples/orchestrator) folder for complete implementations.
+
 ## Using Reasoning Models
 
 Reasoning models are special AI models that can "think through" complex problems step by step. They're great for:

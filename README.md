@@ -633,6 +633,9 @@ The library includes comprehensive examples organized by category.
 - **[customer-service.ts](./examples/orchestrator/customer-service.ts)** - Customer service routing
 - **[research-team.ts](./examples/orchestrator/research-team.ts)** - Research team with tools
 - **[dev-team.ts](./examples/orchestrator/dev-team.ts)** - Development team with context
+- **[travel-agency.ts](./examples/orchestrator/travel-agency.ts)** - Travel booking coordination
+- **[content-creation.ts](./examples/orchestrator/content-creation.ts)** - Content team workflow
+- **[healthcare-triage.ts](./examples/orchestrator/healthcare-triage.ts)** - Healthcare triage system
 
 ### CLI
 
@@ -676,6 +679,9 @@ pnpm check:example examples/agent/error-handling/error-handling.ts
 pnpm check:example examples/orchestrator/customer-service.ts
 pnpm check:example examples/orchestrator/research-team.ts
 pnpm check:example examples/orchestrator/dev-team.ts
+pnpm check:example examples/orchestrator/travel-agency.ts
+pnpm check:example examples/orchestrator/content-creation.ts
+pnpm check:example examples/orchestrator/healthcare-triage.ts
 
 # CLI examples
 pnpm check:example examples/cli/interactive-chat.ts

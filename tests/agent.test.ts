@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { Agent, Orchestrator } from '../src/agent'
+import { Agent } from '../src/agent'
+import { Orchestrator } from '../src/orchestrator'
 import { createTool } from '../src/tools/create-tool'
 import { z } from 'zod'
 

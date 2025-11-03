@@ -1,6 +1,7 @@
 // Core class exports
 export { Micro } from './client'
-export { Agent, Orchestrator } from './agent'
+export { Agent } from './agent'
+export { Orchestrator } from './orchestrator'
 
 // Tool exports
 export { createTool } from './tools/index'
