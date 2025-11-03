@@ -4,23 +4,24 @@ export { z } from 'zod';
 type Provider = {
     apiKey: string;
     baseURL: string;
-    headers?: Record<string, string>;
     model: string;
+    headers?: Record<string, string>;
 };
-type Tool = {
-    schema: {
-        type: 'function';
-        function: {
-            name: string;
-            description: string;
-            parameters: {
-                type: 'object';
-                properties?: Record<string, any>;
-                required?: string[];
-                additionalProperties: boolean;
-            };
+type ToolSchema = {
+    type: 'function';
+    function: {
+        name: string;
+        description: string;
+        parameters: {
+            type: 'object';
+            properties?: Record<string, any>;
+            required?: string[];
+            additionalProperties: boolean;
         };
     };
+};
+type Tool = {
+    schema: ToolSchema;
     execute: (args: any) => any;
 };
 type ContentPart = {
@@ -128,29 +129,38 @@ type OnRequestData = (request: any) => void;
 type OnResponseData = (response: any) => void;
 type OnErrorResponse = (error: any) => void;
 type OnToolCall = (toolResponse: ToolResponse) => void;
-interface MicroOptions {
+type LlmParams = {
     model?: string;
+    messages?: Message[];
+    tool_choice?: ToolChoice;
+    temperature?: number;
+    max_tokens?: number;
+    max_completion_tokens?: number;
+    stream?: boolean;
+    top_p?: number;
+    top_k?: number;
+    presence_penalty?: number;
+    frequency_penalty?: number;
+};
+type MicroOptions = {
     provider?: Provider;
     systemPrompt?: string;
     prompt?: string;
-    messages?: Message[];
     context?: Record<string, any>;
     maxTokens?: number;
-    temperature?: number;
     tools?: Tool[];
-    tool_choice?: ToolChoice;
-    stream?: boolean;
     reasoning?: boolean;
     reasoning_effort?: ReasoningLevel;
     timeout?: number;
     debug?: boolean;
+    override?: LlmParams & Record<string, any>;
     onComplete?: OnCompleteResponse;
     onMessage?: OnMessageResponse;
     onRequest?: OnRequestData;
     onResponseData?: OnResponseData;
     onError?: OnErrorResponse;
     onToolCall?: OnToolCall;
-}
+} & LlmParams;
 
 declare class Micro {
     private baseURL;
@@ -290,6 +300,9 @@ declare const Providers: {
     openrouter: (model?: string) => Provider;
     deepseek: (model?: string) => Provider;
     grok: (model?: string) => Provider;
+    fireworks: (model?: string) => Provider;
+    mistral: (model?: string) => Provider;
+    together: (model?: string) => Provider;
 };
 
 type HttpMethod = 'get' | 'GET' | 'delete' | 'DELETE' | 'head' | 'HEAD' | 'options' | 'OPTIONS' | 'post' | 'POST' | 'put' | 'PUT' | 'patch' | 'PATCH';
