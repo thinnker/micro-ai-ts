@@ -29,6 +29,7 @@ export default [
         AbortController: 'readonly',
         AbortSignal: 'readonly',
         RequestInit: 'readonly',
+        TextDecoder: 'readonly',
         global: 'readonly',
       },
     },

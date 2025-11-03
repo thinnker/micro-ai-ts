@@ -5,20 +5,22 @@ export type Provider = {
   headers?: Record<string, string>
 }
 
-export type Tool = {
-  schema: {
-    type: 'function'
-    function: {
-      name: string
-      description: string
-      parameters: {
-        type: 'object'
-        properties?: Record<string, any>
-        required?: string[]
-        additionalProperties: boolean
-      }
+export type ToolSchema = {
+  type: 'function'
+  function: {
+    name: string
+    description: string
+    parameters: {
+      type: 'object'
+      properties?: Record<string, any>
+      required?: string[]
+      additionalProperties: boolean
     }
   }
+}
+
+export type Tool = {
+  schema: ToolSchema
   execute: (args: any) => any
 }
 
@@ -153,26 +155,36 @@ export type OnErrorResponse = (error: any) => void
 
 export type OnToolCall = (toolResponse: ToolResponse) => void
 
-export interface MicroOptions {
+export type LlmParams = {
   model?: string
+  messages?: Message[]
+  tool_choice?: ToolChoice
+  temperature?: number
+  max_tokens?: number
+  max_completion_tokens?: number
+  stream?: boolean
+  top_p?: number
+  top_k?: number
+  presence_penalty?: number
+  frequency_penalty?: number
+}
+
+export type MicroOptions = {
   provider?: Provider
   systemPrompt?: string
   prompt?: string
-  messages?: Message[]
   context?: Record<string, any>
   maxTokens?: number
-  temperature?: number
   tools?: Tool[]
-  tool_choice?: ToolChoice
-  stream?: boolean
   reasoning?: boolean
   reasoning_effort?: ReasoningLevel
   timeout?: number
   debug?: boolean
+  override?: LlmParams & Record<string, any>
   onComplete?: OnCompleteResponse
   onMessage?: OnMessageResponse
   onRequest?: OnRequestData
   onResponseData?: OnResponseData
   onError?: OnErrorResponse
   onToolCall?: OnToolCall
-}
+} & LlmParams

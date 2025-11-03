@@ -13,18 +13,9 @@ async function main() {
     'If a train travels 120 miles in 2 hours, and then 180 miles in 3 hours, what is its average speed for the entire journey?'
   )
 
-  let thinkingContent = ''
-  let answerContent = ''
-
   for await (const chunk of stream) {
     if (!chunk.done) {
-      // Check if we're in thinking tags
-      if (chunk.fullContent.includes('<think>')) {
-        thinkingContent += chunk.delta
-      } else {
-        answerContent += chunk.delta
-        process.stdout.write(chunk.delta)
-      }
+      process.stdout.write(chunk.delta)
     } else {
       console.log('\n\n--- Analysis Complete ---')
 

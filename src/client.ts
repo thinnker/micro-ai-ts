@@ -131,9 +131,6 @@ export class Micro {
     this.debug = options?.debug || false
     this.streamEnabled = options?.stream || false
 
-    this.reasoning = options?.reasoning ?? true
-    this.reasoning_effort = options.reasoning_effort ?? 'medium'
-
     this.isOpenAI5 = this.model?.toLowerCase()?.includes('gpt-5')
     this.isOpenAIReasoning =
       this.model?.toLowerCase()?.includes('o1') ||
@@ -157,6 +154,9 @@ export class Micro {
       this.isQWQ ||
       this.isDeepseekReasoning ||
       this.isQwen3
+
+    this.reasoning = options?.reasoning || !!this.isReasoningModel
+    this.reasoning_effort = options.reasoning_effort ?? 'medium'
 
     this.onComplete = options.onComplete || undefined
     this.onMessage = options.onMessage || undefined
@@ -603,7 +603,7 @@ export class Micro {
                   done: false,
                 }
               }
-            } catch (e) {
+            } catch {
               // Skip invalid JSON
             }
           }
