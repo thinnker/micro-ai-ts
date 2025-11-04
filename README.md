@@ -4,10 +4,10 @@ A lightweight, beginner-friendly TypeScript library for building LLM-powered app
 
 ## ✨ Features
 
-- **🔌 Multi-Provider Support** - Unified OpenAI-compatible (`/chat/completions`) interface for OpenAI, OpenRouter, Fireworks, Gemini, Anthropic (via compatible providers), Groq, DeepSeek, xAI, Mistral, Together, 302.ai and more
+- **🔌 Multi-Provider Support** - Unified OpenAI-compatible (`/chat/completions`) interface for OpenAI, OpenRouter, Fireworks, Gemini, Anthropic (via compatible providers), Groq, Grok, DeepSeek, xAI, Mistral, Together, Nscale Serverless, 302.ai and more
 - **🤖 Agentic Workflows** - Built-in Agent and Orchestrator classes for autonomous AI systems
 - **🛠️ Tool Calling** - Easy tool creation with automatic execution and Zod schema validation
-- **🧠 Reasoning Models** - First-class support for advanced reasoning models (o1, Gemini 2.5, DeepSeek-R1)
+- **🧠 Reasoning Models** - First-class support for advanced reasoning models (o1, GPT-5, Gemini 2.5, DeepSeek-R1)
 - **💬 Conversation Management** - Automatic message history handling with context preservation
 - **📝 Template Variables** - Dynamic prompt injection with context objects
 - **👁️ Vision Support** - Image input capabilities for multimodal models
@@ -572,8 +572,9 @@ The library includes comprehensive examples organized by category.
 - **[gemini.ts](./examples/providers/gemini.ts)** - Google Gemini
 - **[openrouter.ts](./examples/providers/openrouter.ts)** - OpenRouter
 - **[fireworks.ts](./examples/providers/fireworks.ts)** - Fireworks AI
-- **[ai302.ts](./examples/providers/ai302.ts)** - AI302
+- **[ai302.ts](./examples/providers/ai302.ts)** - 302.ai
 - **[deepseek.ts](./examples/providers/deepseek.ts)** - DeepSeek
+- **[nscale.ts](./examples/providers/nscale.ts)** - Nscale Serverless
 
 ### Agent
 

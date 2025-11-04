@@ -575,6 +575,9 @@ const client = new Micro({ model: 'grok:grok-4-fast' })
 
 // DeepSeek
 const client = new Micro({ model: 'deepseek:deepseek-chat' })
+
+// Nscale Serverless
+const client = new Micro({ model: 'nscale:meta-llama/Llama-3.1-8B-Instruct' })
 ```
 
 ### Custom Provider

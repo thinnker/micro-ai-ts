@@ -83,4 +83,11 @@ export const Providers = {
     baseURL: process.env.TOGETHER_BASE_URL || 'https://api.together.xyz/v1',
     model,
   }),
+
+  nscale: (model = 'meta-llama/Llama-3.1-8B-Instruct'): Provider => ({
+    apiKey: process.env.NSCALE_API_KEY || '',
+    baseURL:
+      process.env.NSCALE_BASE_URL || 'https://inference.api.nscale.com/v1',
+    model,
+  }),
 }
