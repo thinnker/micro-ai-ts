@@ -179,6 +179,7 @@ export type MicroOptions = {
   reasoning?: boolean
   reasoning_effort?: ReasoningLevel
   timeout?: number
+  maxToolInterations?: number
   debug?: boolean
   override?: LlmParams & Record<string, any>
   onComplete?: OnCompleteResponse

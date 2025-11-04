@@ -21,7 +21,7 @@ Complete API documentation for Micro AI.
 
 ## Micro (Client)
 
-The core client for direct LLM interactions with conversation management.
+The core client for direct LLM interactions with conversation management and tool calling capabilities.
 
 ### Micro Options
 
@@ -45,9 +45,10 @@ interface MicroOptions {
   presence_penalty?: number // Penalize new tokens based on presence
   frequency_penalty?: number // Penalize new tokens based on frequency
 
-  // Tool Configuration
+  // Tool Configuration (works with both Micro and Agent)
   tools?: Tool[] // Available tools for the model
   tool_choice?: ToolChoice // Tool selection strategy
+  maxToolInterations?: number // Max tool call iterations (default: 10)
 
   // Streaming
   stream?: boolean // Enable streaming responses
@@ -295,7 +296,7 @@ class Orchestrator extends Agent {
 
 ## Tools
 
-Tools enable agents to perform actions beyond text generation.
+Tools enable both the Micro client and agents to perform actions beyond text generation. Tools are automatically executed when called by the model, and the results are fed back into the conversation.
 
 ### Creating Tools
 
@@ -347,22 +348,45 @@ const weatherTool = createTool(
     return { location, temperature: 72, condition: 'Sunny', units }
   }
 )
+
+// Use with Micro client
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [weatherTool],
+})
+
+const response = await client.chat("What's the weather in Paris?")
+// Tool is automatically called and result is used in response
+
+// Or use with Agent
+const agent = Agent.create({
+  name: 'Weather Assistant',
+  background: 'Help users check the weather',
+  tools: [weatherTool],
+})
 ```
 
 ---
 
 ## Streaming
 
-Stream responses token-by-token for real-time output.
+Stream responses token-by-token for real-time output. Streaming now supports automatic tool calling - tools are executed transparently during the stream, and only the final response is yielded.
 
 ### Stream Method
 
 ```typescript
-const stream = await client.stream('Your prompt here')
+// Streaming with tools
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [calculatorTool],
+})
+
+const stream = await client.stream('What is 150 + 300? Then multiply by 2.')
 
 for await (const chunk of stream) {
   if (!chunk.done) {
     // Process each token as it arrives
+    // Tool calls happen automatically in the background
     process.stdout.write(chunk.delta)
   } else {
     // Final chunk with complete response
@@ -397,6 +421,8 @@ interface StreamChunk {
 - Not all providers return token usage during streaming
 - Streaming works with multi-turn conversations
 - For reasoning models, reasoning content is included in chunks
+- Tool calls are handled automatically during streaming
+- Multiple tool calls can be chained transparently
 
 ---
 

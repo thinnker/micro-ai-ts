@@ -1,7 +1,14 @@
 import dedent from 'dedent'
 import { z } from 'zod'
 import { Micro } from './client'
-import type { MicroOptions, Tool, Message, Metadata, Response } from './types'
+import type {
+  MicroOptions,
+  Tool,
+  Message,
+  Metadata,
+  Response,
+  StreamResponse,
+} from './types'
 import { createTool } from './tools/create-tool'
 import { cleanEmptyList, slugify } from './utils/utils'
 
@@ -189,6 +196,11 @@ export class Agent {
   public async chat(prompt: string): Promise<Response> {
     this.addPrompt(prompt)
     return this.client.invoke()
+  }
+
+  public async stream(prompt: string): Promise<StreamResponse> {
+    this.addPrompt(prompt)
+    return this.client.stream(prompt)
   }
 
   public getMessages(): Message[] {

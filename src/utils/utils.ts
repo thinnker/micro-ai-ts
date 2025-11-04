@@ -156,7 +156,7 @@ export function microlog(label: string, ...args: any[]): void {
   console.log('='.repeat(50))
   // console.log(JSON.stringify({ ...args }, null, 2))
   console.log(...args)
-  console.log('='.repeat(50) + '\n')
+  console.log('='.repeat(50))
 }
 
 /**

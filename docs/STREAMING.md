@@ -1,12 +1,14 @@
 # Streaming API
 
-The `.stream()` method provides real-time token-by-token streaming of LLM responses.
+The `.stream()` method provides real-time token-by-token streaming of LLM responses with automatic tool calling support.
 
 ## Overview
 
 - **Method**: `async stream(prompt: string, bufferString?: string): Promise<StreamResponse>`
 - **Automatically sets**: `stream: true`
 - **Returns**: AsyncGenerator that yields chunks as they arrive
+- **Tool Support**: Automatically handles tool calls during streaming
+- **Max Iterations**: Configurable via `maxToolInterations` (default: 10)
 
 ## Basic Usage
 
@@ -23,6 +25,45 @@ for await (const chunk of stream) {
     process.stdout.write(chunk.delta)
   } else {
     // Final chunk contains complete response
+    console.log('\nComplete:', chunk.fullContent)
+  }
+}
+```
+
+## Streaming with Tools
+
+Tools are automatically executed during streaming. The tool calls happen transparently in the background, and only the final response is yielded to the user.
+
+```typescript
+import { Micro, createTool } from 'micro-ai-ts'
+import { z } from 'zod'
+
+const calculatorTool = createTool(
+  'calculator',
+  'Performs arithmetic operations',
+  z.object({
+    operation: z.enum(['add', 'multiply']),
+    a: z.number(),
+    b: z.number(),
+  }),
+  async ({ operation, a, b }) => {
+    return operation === 'add' ? a + b : a * b
+  }
+)
+
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [calculatorTool],
+  maxToolInterations: 10, // Optional: limit tool call chains
+})
+
+const stream = await client.stream('What is 150 + 300? Then multiply by 2.')
+
+for await (const chunk of stream) {
+  if (!chunk.done) {
+    // Only the final response is streamed, not tool calls
+    process.stdout.write(chunk.delta)
+  } else {
     console.log('\nComplete:', chunk.fullContent)
   }
 }
@@ -101,17 +142,51 @@ for await (const chunk of stream) {
 | Use case            | Real-time UI updates     | Batch processing         |
 | Time to first token | Faster                   | N/A                      |
 
+## Tool Call Behavior
+
+When streaming with tools:
+
+1. The model decides if it needs to call a tool
+2. Tool calls are executed automatically in the background
+3. Results are fed back to the model
+4. The model generates the final response
+5. Only the final response is streamed to the user
+
+This creates a seamless experience where tool calls are transparent to the end user.
+
+### Monitoring Tool Calls
+
+Use the `onToolCall` hook to monitor tool executions during streaming:
+
+```typescript
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [calculatorTool],
+  onToolCall: (toolResponse) => {
+    console.log(`\n[Tool Called]: ${toolResponse.toolName}`)
+    console.log(`[Arguments]: ${JSON.stringify(toolResponse.arguments)}`)
+    console.log(`[Result]: ${toolResponse.result}`)
+  },
+})
+
+const stream = await client.stream('Calculate 25 * 4 and tell me about it')
+
+for await (const chunk of stream) {
+  if (!chunk.done) process.stdout.write(chunk.delta)
+}
+```
+
 ## Examples
 
 See the `examples/stream/` directory for complete examples:
 
 - `simple-stream.ts` - Basic streaming
+- `simple-stream-with-tools.ts` - Streaming with automatic tool calling
 - `stream-multi-turn.ts` - Multi-turn conversations
 - `stream-with-context.ts` - Streaming with system prompts
 - `stream-reasoning.ts` - Reasoning model streaming (o1)
 - `stream-deepseek-reasoning.ts` - DeepSeek-R1 streaming
 - `stream-comparison.ts` - Performance comparison
-- `test-stream.ts` - Quick verification test
 
 ## Error Handling
 
@@ -131,16 +206,36 @@ try {
 
 ## Event Hooks
 
-All event hooks work with streaming:
+All event hooks work with streaming, including tool-related hooks:
 
 ```typescript
 const client = new Micro({
   model: 'openai:gpt-4o-mini',
+  tools: [calculatorTool],
   onComplete: (response, messages) => {
     console.log('Stream completed!')
   },
   onMessage: (messages) => {
     console.log('Message added to history')
   },
+  onToolCall: (toolResponse) => {
+    console.log('Tool executed:', toolResponse.toolName)
+  },
 })
 ```
+
+## Configuration Options
+
+### maxToolInterations
+
+Limits the number of tool call iterations to prevent infinite loops:
+
+```typescript
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [tool1, tool2],
+  maxToolInterations: 5, // Default is 10
+})
+```
+
+If the limit is reached, an error is thrown: `"Max tool call iterations reached"`

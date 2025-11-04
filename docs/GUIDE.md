@@ -34,14 +34,14 @@ const response = await client.chat('What is the capital of France?')
 console.log(response.completion.content) // "Paris"
 ```
 
-### 2. Agent
+### 2. Tools
 
-An agent is an AI that can use tools to accomplish tasks. It's like giving your AI hands to interact with the world.
+Tools give your AI the ability to perform actions beyond text generation. Both the Micro client and Agent can use tools.
 
-**Think of it like:** A personal assistant who can not only answer questions but also check the weather, search the web, or send emails.
+**Think of it like:** Giving your AI hands to interact with the world - check the weather, search the web, perform calculations, or call APIs.
 
 ```typescript
-import { Agent, createTool } from 'micro-ai-ts'
+import { Micro, createTool } from 'micro-ai-ts'
 import { z } from 'zod'
 
 const weatherTool = createTool(
@@ -54,9 +54,28 @@ const weatherTool = createTool(
   }
 )
 
+// Use tools with Micro client
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [weatherTool],
+})
+
+const response = await client.chat("What's the weather in Paris?")
+// The tool is automatically called and the result is used in the response
+```
+
+### 3. Agent
+
+An agent is a specialized AI with a defined role and purpose. Agents can also use tools, just like the Micro client.
+
+**Think of it like:** A specialized team member with a specific job description and expertise.
+
+```typescript
+import { Agent } from 'micro-ai-ts'
+
 const agent = Agent.create({
   name: 'WeatherBot',
-  background: 'You help users check the weather',
+  background: 'You help users check the weather using available tools',
   model: 'openai:gpt-4.1-mini',
   tools: [weatherTool],
 })
@@ -65,7 +84,7 @@ const response = await agent.chat("What's the weather in Paris?")
 // The agent will automatically call the weather tool and respond
 ```
 
-### 3. Orchestrator
+### 4. Orchestrator
 
 An orchestrator coordinates multiple specialized agents. It's like a manager who delegates tasks to the right team member.
 
@@ -93,7 +112,7 @@ const orchestrator = Orchestrator.create({
 })
 ```
 
-### 4. Streaming
+### 5. Streaming
 
 Streaming lets you see the AI's response as it's being generated, token by token, instead of waiting for the complete response.
 
@@ -102,10 +121,13 @@ Streaming lets you see the AI's response as it's being generated, token by token
 ```typescript
 import { Micro } from 'micro-ai-ts'
 
-const client = new Micro({ model: 'openai:gpt-4o-mini' })
+const client = new Micro({
+  model: 'openai:gpt-4o-mini',
+  tools: [calculatorTool], // Tools work with streaming too!
+})
 
-// Stream the response
-const stream = await client.stream('Write a short poem')
+// Stream the response (tools are called automatically)
+const stream = await client.stream('What is 25 times 4? Write a poem about it.')
 
 for await (const chunk of stream) {
   if (!chunk.done) {
@@ -248,9 +270,9 @@ const client = new Micro({
 // "You are a friendly teacher. Your expertise is explaining complex topics simply."
 ```
 
-## Adding Tools to Agents
+## Using Tools
 
-Tools let your AI perform actions. Here's how to create them:
+Tools let your AI perform actions. You can use tools with both the Micro client and Agents. Here's how to create them:
 
 ### Step 1: Define What the Tool Does
 
@@ -282,9 +304,19 @@ const calculatorTool = createTool(
 )
 ```
 
-### Step 2: Give the Tool to an Agent
+### Step 2: Use the Tool
 
 ```typescript
+// Option 1: With Micro client
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [calculatorTool],
+})
+
+const response = await client.chat('What is 15 times 23?')
+console.log(response.completion.content)
+
+// Option 2: With Agent
 const mathAgent = Agent.create({
   name: 'MathTutor',
   background: 'You help students with math problems',
@@ -292,9 +324,8 @@ const mathAgent = Agent.create({
   tools: [calculatorTool],
 })
 
-const response = await mathAgent.chat('What is 15 times 23?')
-// The agent will automatically use the calculator tool
-console.log(response.completion.content)
+const response2 = await mathAgent.chat('What is 15 times 23?')
+console.log(response2.completion.content)
 ```
 
 ### How Tools Work
@@ -321,14 +352,22 @@ const searchTool = createTool(
   }
 )
 
+// Use with Micro client for simple queries
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [searchTool],
+})
+
+await client.chat('What are the latest developments in AI?')
+
+// Or use with Agent for more complex workflows
 const researchAgent = Agent.create({
   name: 'Researcher',
   background: 'You help users find information online',
   tools: [searchTool],
 })
 
-await researchAgent.chat('What are the latest developments in AI?')
-// Agent will search the web and summarize findings
+await researchAgent.chat('Research AI trends and create a summary')
 ```
 
 ## Multi-Agent Orchestration
@@ -729,9 +768,9 @@ const client = new Micro({
 })
 ```
 
-### Problem: "Agent keeps calling wrong tool"
+### Problem: "AI keeps calling wrong tool"
 
-**Solution:** Improve tool descriptions and background:
+**Solution:** Improve tool descriptions:
 
 ```typescript
 const tool = createTool(
@@ -742,11 +781,19 @@ const tool = createTool(
   execute
 )
 
+// With Micro client
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [searchTool, orderTool],
+})
+
+// With Agent (can provide more context)
 const agent = Agent.create({
   name: 'ShopAssistant',
   // Bad: 'You help users'
   // Good: 'You help users find products. When they ask about products, use the search_database tool. When they ask about orders, use the check_order tool.',
   background: '...',
+  tools: [searchTool, orderTool],
 })
 ```
 

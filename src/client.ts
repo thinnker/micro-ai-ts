@@ -10,6 +10,7 @@ import type {
   MessageRole,
   ModelCapabilities,
   LlmParams,
+  ToolCall,
 } from './types'
 import { Providers } from './providers'
 import { httpClient } from './http'
@@ -59,6 +60,7 @@ export class Micro {
   private reasoning: boolean
   private reasoning_effort?: ReasoningLevel
   private override?: LlmParams & Record<string, any>
+  private maxToolInterations: number
 
   private onComplete?: MicroOptions['onComplete']
   private onMessage?: MicroOptions['onMessage']
@@ -69,8 +71,9 @@ export class Micro {
 
   constructor(options: MicroOptions = {}) {
     this.identifier = randomId()
-    this.timeout = options.timeout
+    this.timeout = options.timeout ?? 120000
     this.debug = options.debug ?? false
+    this.maxToolInterations = options.maxToolInterations ?? 10
     this.streamEnabled = options.stream ?? false
 
     this.modelName = stripModelName(options.model || '') || Defaults.model
@@ -207,7 +210,9 @@ export class Micro {
       ...(this.capabilities.isReasoningModel && {
         isReasoningEnabled: this.reasoning,
         isReasoningModel: this.capabilities.isReasoningModel,
-        reasoning_effort: this.reasoning_effort,
+        ...(this.reasoning_effort && {
+          reasoning_effort: this.reasoning_effort,
+        }),
       }),
     }
   }
@@ -389,21 +394,24 @@ export class Micro {
   }
 
   private async handleToolCalls(toolCalls: any[]): Promise<void> {
-    for (const toolCall of toolCalls) {
+    const toolExecutions = toolCalls.map(async (toolCall) => {
       const result = await this.executeTool(
         toolCall.function.name,
         toolCall.function.arguments
       )
 
-      this.messages.push({
-        role: 'tool',
+      return {
+        role: 'tool' as const,
         tool_call_id: toolCall.id,
         name: toolCall.function.name,
         content: typeof result === 'string' ? result : JSON.stringify(result),
-      })
+      }
+    })
 
-      this.onMessage?.(this.messages)
-    }
+    const toolResults = await Promise.all(toolExecutions)
+
+    this.messages.push(...toolResults)
+    this.onMessage?.(this.messages)
   }
 
   private extractReasoning(message: any): {
@@ -447,7 +455,9 @@ export class Micro {
         isReasoningEnabled: this.reasoning,
         isReasoningModel:
           this.capabilities.isReasoningModel || reasoning.length > 0,
-        reasoning_effort: this.reasoning_effort,
+        ...(this.reasoning_effort && {
+          reasoning_effort: this.reasoning_effort,
+        }),
         hasThoughts: reasoning.length > 0,
       },
       fullResponse: responseData,
@@ -551,7 +561,9 @@ export class Micro {
       context: this.context,
       isReasoningEnabled: this.reasoning,
       isReasoningModel: this.capabilities.isReasoningModel,
-      reasoning_effort: this.reasoning_effort,
+      ...(this.reasoning_effort && {
+        reasoning_effort: this.reasoning_effort,
+      }),
       hasThoughts: reasoning.length > 0,
     }
   }
@@ -569,6 +581,7 @@ export class Micro {
     let role = 'assistant'
     let buffer = ''
     let tokensUsed: any = undefined
+    let toolCalls: ToolCall[] = []
 
     try {
       while (true) {
@@ -587,8 +600,38 @@ export class Micro {
             try {
               const parsed = JSON.parse(trimmedLine.slice(6))
               const delta = parsed.choices?.[0]?.delta
+              if (this.debug && delta) {
+                console.log(
+                  'STREAM: Received delta:',
+                  JSON.stringify(delta, null, 2)
+                )
+              }
 
               if (delta?.role) role = delta.role
+
+              if (delta?.tool_calls) {
+                for (const toolCallDelta of delta.tool_calls) {
+                  const index = toolCallDelta.index ?? toolCalls.length
+                  if (!toolCalls[index]) {
+                    toolCalls[index] = {
+                      id: toolCallDelta.id || '',
+                      type: 'function',
+                      function: {
+                        name: toolCallDelta.function?.name || '',
+                        arguments: toolCallDelta.function?.arguments || '',
+                      },
+                    }
+                  } else {
+                    if (toolCallDelta.id) toolCalls[index].id = toolCallDelta.id
+                    if (toolCallDelta.function?.name)
+                      toolCalls[index].function.name =
+                        toolCallDelta.function.name
+                    if (toolCallDelta.function?.arguments)
+                      toolCalls[index].function.arguments +=
+                        toolCallDelta.function.arguments
+                  }
+                }
+              }
 
               const deltaReasoning =
                 delta?.reasoning || delta?.reasoning_content
@@ -612,7 +655,15 @@ export class Micro {
         }
       }
 
-      this.messages.push({ role: role as MessageRole, content: fullContent })
+      const message: Message = {
+        role: role as MessageRole,
+        content: fullContent,
+      }
+      if (toolCalls.length > 0) {
+        message.tool_calls = toolCalls
+      }
+
+      this.messages.push(message)
       this.onMessage?.(this.messages)
 
       const latencyMs = Date.now() - startTime
@@ -653,17 +704,57 @@ export class Micro {
     bufferString?: string
   ): Promise<StreamResponse> {
     this.setUserMessage(prompt, bufferString)
-    const startTime = Date.now()
+    return this.streamWithToolHandling()
+  }
 
-    try {
-      const response = await this.makeRequest(true)
-      return this.processStream(response as Response, startTime)
-    } catch (error: any) {
-      const latencyMs = Date.now() - startTime
-      const errorResponse = this.buildErrorResponse(error, latencyMs)
+  private async *streamWithToolHandling(): StreamResponse {
+    let iteration = 0
 
-      this.onError?.(errorResponse.error)
-      throw errorResponse.error
+    while (iteration < this.maxToolInterations) {
+      iteration++
+      const startTime = Date.now()
+
+      try {
+        const response = await this.makeRequest(true)
+        const stream = this.processStream(response as Response, startTime)
+
+        let hasToolCalls = false
+
+        for await (const chunk of stream) {
+          if (chunk.done) {
+            const lastMessage = this.messages[this.messages.length - 1]
+            if (lastMessage?.tool_calls?.length) {
+              hasToolCalls = true
+            } else {
+              // No tool calls, yield the final chunk
+              yield chunk
+            }
+          } else {
+            // Yield non-final chunks immediately
+            yield chunk
+          }
+        }
+
+        if (hasToolCalls) {
+          const lastMessage = this.messages[this.messages.length - 1]
+          if (lastMessage?.tool_calls) {
+            await this.handleToolCalls(lastMessage.tool_calls)
+          }
+
+          continue
+        }
+
+        break
+      } catch (error: any) {
+        const latencyMs = Date.now() - startTime
+        const errorResponse = this.buildErrorResponse(error, latencyMs)
+        this.onError?.(errorResponse.error)
+        throw errorResponse.error
+      }
+    }
+
+    if (iteration >= this.maxToolInterations) {
+      throw new Error('Max tool call iterations reached')
     }
   }
 }

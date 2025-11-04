@@ -42,6 +42,42 @@ const response = await client.chat('What is TypeScript?')
 console.log(response.completion.content)
 ```
 
+### Chat with Tools
+
+```typescript
+import { Micro, createTool } from 'micro-ai-ts'
+import { z } from 'zod'
+
+// Define a tool
+const calculatorTool = createTool(
+  'calculator',
+  'Performs arithmetic operations',
+  z.object({
+    operation: z.enum(['add', 'subtract', 'multiply', 'divide']),
+    a: z.number(),
+    b: z.number(),
+  }),
+  async ({ operation, a, b }) => {
+    const ops = {
+      add: a + b,
+      subtract: a - b,
+      multiply: a * b,
+      divide: a / b,
+    }
+    return ops[operation]
+  }
+)
+
+// Use tools directly with Micro client
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [calculatorTool],
+})
+
+const response = await client.chat('What is 150 + 300?')
+console.log(response.completion.content)
+```
+
 ### Agent with Tools
 
 ```typescript
@@ -108,7 +144,7 @@ console.log(response.completion.content)
 
 ### Micro (Client)
 
-The core client for direct LLM interactions with conversation management.
+The core client for direct LLM interactions with conversation management and tool calling.
 
 `Configured`
 
@@ -119,6 +155,7 @@ const client = new Micro({
   temperature: 0.7,
   maxTokens: 1000,
   context: { name: 'John' }, // Template variables
+  tools: [calculatorTool, weatherTool], // Optional tools
   onComplete: (result) => console.log('Response received!'),
 })
 
@@ -131,7 +168,7 @@ console.log(response.metadata.model) // Model used
 console.log(response.metadata.tokensUsed) // Token usage
 console.log(response.metadata.timing) // Response time
 
-// Streaming responses
+// Streaming responses (with automatic tool handling)
 const stream = await client.stream('Tell me a story')
 for await (const chunk of stream) {
   if (!chunk.done) {
@@ -241,7 +278,7 @@ const response = await orchestrator.chat('Complex multi-step task')
 
 ### Tools
 
-Tools enable agents to perform actions beyond text generation.
+Tools enable both the Micro client and agents to perform actions beyond text generation.
 
 ```typescript
 import { createTool } from 'micro-ai-ts'
@@ -270,21 +307,37 @@ const calculatorTool = createTool(
     }
   }
 )
+
+// Use with Micro client
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: [calculatorTool],
+})
+
+// Or use with Agent
+const agent = Agent.create({
+  name: 'Math Assistant',
+  background: 'Help with calculations',
+  tools: [calculatorTool],
+})
 ```
 
 ### Streaming Responses
 
-Stream responses token-by-token for real-time output. The `.stream()` method automatically sets `stream: true` and returns an async generator.
+Stream responses token-by-token for real-time output. The `.stream()` method automatically sets `stream: true` and returns an async generator. Streaming now supports automatic tool calling.
 
 **Please note:**
 
 - Not all providers provide `usage` key, with token count on streaming. Providers like OpenAI, Gemini are some that dont, but same models on OpenRouter or Deepseek will provide this. Its a trial and error.
 
 ```typescript
-const client = new Micro({ model: 'openrouter:openai/gpt-5-nano' })
+const client = new Micro({
+  model: 'openrouter:openai/gpt-5-nano',
+  tools: [calculatorTool], // Tools work with streaming too!
+})
 
-// Stream a response
-const stream = await client.stream('Write a short poem about TypeScript')
+// Stream a response with automatic tool handling
+const stream = await client.stream('What is 150 + 300? Then multiply by 2.')
 
 for await (const chunk of stream) {
   if (!chunk.done) {
@@ -318,6 +371,7 @@ for await (const chunk of stream2) {
 
 - `.chat()` - Returns complete response after generation finishes (requires `stream: false`)
 - `.stream()` - Returns tokens as they're generated (automatically sets `stream: true`)
+- Both methods now support automatic tool calling
 
 ## 🔧 Configuration
 
@@ -493,6 +547,7 @@ The library includes comprehensive examples organized by category.
 ### Basic
 
 - **[simple-chat.ts](./examples/basic/simple-chat.ts)** - Basic chat interaction
+- **[simple-chat-with-tools.ts](./examples/basic/simple-chat-with-tools.ts)** - Chat with automatic tool calling
 - **[simple-chat-with-error.ts](./examples/basic/simple-chat-with-error.ts)** - Basic chat interaction that has error
 - **[multi-turn.ts](./examples/basic/multi-turn.ts)** - Multi-turn conversations
 - **[template-context.ts](./examples/basic/template-context.ts)** - Template variables
@@ -501,6 +556,7 @@ The library includes comprehensive examples organized by category.
 ### Streaming
 
 - **[simple-stream.ts](./examples/stream/simple-stream.ts)** - Basic streaming
+- **[simple-stream-with-tools.ts](./examples/stream/simple-stream-with-tools.ts)** - Streaming with automatic tool calling
 - **[simple-streaming-tokens.ts](./examples/stream/simple-streaming-tokens.ts)** - Basic streaming with token usage
 - **[streaming-with-tokens.ts](./examples/stream/streaming-with-tokens.ts)** - Advanced streaming with token usage and cost estimation
 - **[stream-multi-turn.ts](./examples/stream/stream-multi-turn.ts)** - Multi-turn streaming
@@ -549,10 +605,12 @@ cp .env.example .env
 # Run examples with check:example script
 # Basic examples
 pnpm check:example examples/basic/simple-chat.ts
+pnpm check:example examples/basic/simple-chat-with-tools.ts
 pnpm check:example examples/basic/multi-turn.ts
 
 # Streaming examples
 pnpm check:example examples/stream/simple-stream.ts
+pnpm check:example examples/stream/simple-stream-with-tools.ts
 pnpm check:example examples/stream/simple-streaming-tokens.ts
 pnpm check:example examples/stream/streaming-with-tokens.ts
 pnpm check:example examples/stream/stream-comparison.ts
