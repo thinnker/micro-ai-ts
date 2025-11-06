@@ -31,6 +31,8 @@ export default [
         RequestInit: 'readonly',
         TextDecoder: 'readonly',
         global: 'readonly',
+        URL: 'readonly',
+        crypto: 'readonly',
       },
     },
     plugins: {

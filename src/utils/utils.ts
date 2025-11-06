@@ -1,12 +1,10 @@
-import hyperid from 'hyperid'
 import { Provider } from '../types'
 
 /**
  * Generate a random ID using crypto.randomUUID
  */
 export function randomId(): string {
-  const id = hyperid({ urlSafe: true })
-  return id()
+  return crypto.randomUUID()
 }
 
 /**

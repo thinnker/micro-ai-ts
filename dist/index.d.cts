@@ -152,6 +152,7 @@ type MicroOptions = {
     reasoning?: boolean;
     reasoning_effort?: ReasoningLevel;
     timeout?: number;
+    maxToolInterations?: number;
     debug?: boolean;
     override?: LlmParams & Record<string, any>;
     onComplete?: OnCompleteResponse;
@@ -186,6 +187,7 @@ declare class Micro {
     private reasoning;
     private reasoning_effort?;
     private override?;
+    private maxToolInterations;
     private onComplete?;
     private onMessage?;
     private onRequest?;
@@ -221,6 +223,7 @@ declare class Micro {
     private buildStreamMetadata;
     private processStream;
     stream(prompt: string, bufferString?: string): Promise<StreamResponse>;
+    private streamWithToolHandling;
 }
 
 type AgentOptions = Omit<MicroOptions, 'prompt'> & {
@@ -247,6 +250,7 @@ declare class Agent {
     private handoffAgentToStringList;
     invoke(): Promise<Response>;
     chat(prompt: string): Promise<Response>;
+    stream(prompt: string): Promise<StreamResponse>;
     getMessages(): Message[];
     addPrompt(msg: string): void;
     addAssistantPrompt(msg: string): void;
@@ -264,7 +268,7 @@ declare class Orchestrator extends Agent {
  *
  * @param name - The name of the tool
  * @param description - A description of what the tool does
- * @param schema - A trod schema defining the tool's parameters
+ * @param schema - A zod schema defining the tool's parameters
  * @param executeFn - The function to execute when the tool is called
  * @returns A Tool object with schema and execute function
  *
@@ -308,6 +312,7 @@ declare const Providers: {
     fireworks: (model?: string) => Provider;
     mistral: (model?: string) => Provider;
     together: (model?: string) => Provider;
+    nscale: (model?: string) => Provider;
 };
 
 type HttpMethod = 'get' | 'GET' | 'delete' | 'DELETE' | 'head' | 'HEAD' | 'options' | 'OPTIONS' | 'post' | 'POST' | 'put' | 'PUT' | 'patch' | 'PATCH';

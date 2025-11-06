@@ -8,7 +8,7 @@ import type { Tool } from '../types'
  *
  * @param name - The name of the tool
  * @param description - A description of what the tool does
- * @param schema - A trod schema defining the tool's parameters
+ * @param schema - A zod schema defining the tool's parameters
  * @param executeFn - The function to execute when the tool is called
  * @returns A Tool object with schema and execute function
  *
