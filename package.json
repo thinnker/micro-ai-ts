@@ -26,7 +26,8 @@
     "test:ui": "vitest --ui",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "check:all": "pnpm type-check && pnpm lint && pnpm format:check && pnpm test"
+    "check:all": "pnpm type-check && pnpm lint && pnpm format:check && pnpm test",
+    "bump": "npm version patch"
   },
   "keywords": [
     "llm",
