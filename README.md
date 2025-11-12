@@ -7,6 +7,7 @@ A lightweight, beginner-friendly TypeScript library for building LLM-powered app
 - **🔌 Multi-Provider Support** - Unified OpenAI-compatible (`/chat/completions`) interface for OpenAI, OpenRouter, Fireworks, Gemini, Anthropic (via compatible providers), Groq, Grok, DeepSeek, xAI, Mistral, Together, Nscale Serverless, 302.ai and more
 - **🤖 Agentic Workflows** - Built-in Agent and Orchestrator classes for autonomous AI systems
 - **🛠️ Tool Calling** - Easy tool creation with automatic execution and Zod schema validation
+- **🔗 MCP Integration** - Native support for Model Context Protocol servers as tools
 - **🧠 Reasoning Models** - First-class support for advanced reasoning models (o1, GPT-5, Gemini 2.5, DeepSeek-R1)
 - **💬 Conversation Management** - Automatic message history handling with context preservation
 - **📝 Template Variables** - Dynamic prompt injection with context objects
@@ -18,11 +19,11 @@ A lightweight, beginner-friendly TypeScript library for building LLM-powered app
 ## 📦 Installation
 
 ```bash
+# Using pnpm (recommended)
+pnpm add git+https://github.com/thinnker/micro-ai-ts.git
+
 # Using npm
 npm install git+https://github.com/thinnker/micro-ai-ts.git
-
-# Using pnpm
-pnpm add git+https://github.com/thinnker/micro-ai-ts.git
 
 # Using yarn
 yarn add git+https://github.com/thinnker/micro-ai-ts.git
@@ -373,6 +374,49 @@ for await (const chunk of stream2) {
 - `.stream()` - Returns tokens as they're generated (automatically sets `stream: true`)
 - Both methods now support automatic tool calling
 
+### MCP (Model Context Protocol) Integration
+
+Connect AI to external tools and data sources using MCP servers. MCP tools work seamlessly with Micro, Agent, and Orchestrator.
+
+```typescript
+import { Micro, createMCPTools } from 'micro-ai-ts'
+
+// Load tools from an MCP server using npx (Node.js native)
+const mcpTools = await createMCPTools({
+  command: 'npx',
+  args: ['-y', '@playwright/mcp'],
+})
+
+// Use MCP tools like any other tool
+const client = new Micro({
+  model: 'openai:gpt-4.1-mini',
+  tools: mcpTools,
+})
+
+const response = await client.chat('Navigate to example.com and get the title')
+```
+
+**Popular MCP Servers:**
+
+**Node.js/TypeScript Native (Recommended):**
+
+- `@playwright/mcp` - Browser automation (navigate, click, type, scrape) - Use with `npx -y @playwright/mcp`
+- `@modelcontextprotocol/server-filesystem` - Read local files - Use with `npx -y @modelcontextprotocol/server-filesystem`
+- `@modelcontextprotocol/server-git` - Git operations - Use with `npx -y @modelcontextprotocol/server-git`
+
+**Python-based (Requires uv/uvx):**
+
+- `mcp-server-fetch` - Fetch web content - Use with `uvx mcp-server-fetch`
+- `mcp-server-sqlite` - SQLite queries - Use with `uvx mcp-server-sqlite`
+- `mcp-server-postgres` - PostgreSQL queries - Use with `uvx mcp-server-postgres`
+
+**Prerequisites:**
+
+- Node.js native servers: No additional setup required (uses `npx`)
+- Python-based servers: **⚠️ Requires [uv](https://docs.astral.sh/uv/getting-started/installation/) to be installed on your system first.** Install with `curl -LsSf https://astral.sh/uv/install.sh | sh` (macOS/Linux) or `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"` (Windows)
+
+See [MCP Examples](./examples/mcp/) for detailed usage and more servers.
+
 ## 🔧 Configuration
 
 ### Provider Configuration
@@ -397,6 +441,22 @@ const client = new Micro({ model: 'grok:grok-4-fast' })
 
 // DeepSeek
 const client = new Micro({ model: 'deepseek:deepseek-chat' })
+
+// Nscale
+const client = new Micro({ model: 'nscale:meta-llama/Llama-3.1-8B-Instruct' })
+
+// Mistral
+const client = new Micro({ model: 'mistral:mistral-large-latest' })
+
+// Together
+const client = new Micro({
+  model: 'together:meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo',
+})
+
+// Fireworks
+const client = new Micro({
+  model: 'fireworks:accounts/fireworks/models/llama4-maverick-instruct-basic',
+})
 ```
 
 ### Custom Provider
@@ -494,8 +554,10 @@ const response = await client.chat("What's in this image?", bufferString)
 ## 📚 Documentation
 
 - **[API Reference](./docs/API.md)** - Complete API documentation with detailed type definitions
-- **[Beginner's Guide](./docs/GUIDE.md)** - Step-by-step tutorial for getting started (coming soon)
-- **[Streaming Guide](./docs/STREAMING.md)** - Detailed streaming documentation
+- **[Beginner's Guide](./docs/GUIDE.md)** - Step-by-step tutorial for getting started
+- **[Streaming Guide](./docs/STREAMING.md)** - Detailed streaming documentation with tool support
+- **[MCP Integration](./docs/MCP.md)** - Model Context Protocol integration guide
+- **[MCP Quick Start](./docs/MCP_QUICK_START.md)** - Get started with MCP in 5 minutes
 - **[Examples](./examples/)** - Working code examples for common use cases
 
 ## 🎣 Event Hooks
@@ -583,6 +645,17 @@ The library includes comprehensive examples organized by category.
 - **[database-query](./examples/agent/database-query/)** - Database query tool
 - **[error-handling](./examples/agent/error-handling/)** - Tool error handling
 
+### MCP (Model Context Protocol)
+
+- **[fetch-example.ts](./examples/mcp/fetch-example.ts)** - Fetch web content with MCP
+- **[filesystem-example.ts](./examples/mcp/filesystem-example.ts)** - Read local files with MCP
+- **[agent-with-mcp.ts](./examples/mcp/agent-with-mcp.ts)** - Agent using MCP tools
+- **[streaming-with-mcp.ts](./examples/mcp/streaming-with-mcp.ts)** - Streaming with MCP tools
+- **[mixed-tools.ts](./examples/mcp/mixed-tools.ts)** - Combine regular and MCP tools
+- **[playwright-example.ts](./examples/mcp/playwright-example.ts)** - Browser automation with Playwright
+- **[playwright-agent.ts](./examples/mcp/playwright-agent.ts)** - Web research agent
+- **[playwright-advanced.ts](./examples/mcp/playwright-advanced.ts)** - Advanced browser workflows
+
 ### Orchestrator
 
 - **[customer-service.ts](./examples/orchestrator/customer-service.ts)** - Customer service routing
@@ -632,6 +705,16 @@ pnpm check:example examples/agent/weather-assistant/weather-assistant.ts
 pnpm check:example examples/agent/database-query/database-query.ts
 pnpm check:example examples/agent/error-handling/error-handling.ts
 
+# MCP examples
+pnpm check:example examples/mcp/fetch-example.ts
+pnpm check:example examples/mcp/filesystem-example.ts
+pnpm check:example examples/mcp/agent-with-mcp.ts
+pnpm check:example examples/mcp/streaming-with-mcp.ts
+pnpm check:example examples/mcp/mixed-tools.ts
+pnpm check:example examples/mcp/playwright-example.ts
+pnpm check:example examples/mcp/playwright-agent.ts
+pnpm check:example examples/mcp/playwright-advanced.ts
+
 # Orchestrator examples
 pnpm check:example examples/orchestrator/customer-service.ts
 pnpm check:example examples/orchestrator/research-team.ts
@@ -663,6 +746,30 @@ pnpm dev
 
 # Type checking
 pnpm type-check
+
+# Run tests
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Run tests with UI
+pnpm test:ui
+
+# Lint code
+pnpm lint
+
+# Fix linting issues
+pnpm lint:fix
+
+# Format code
+pnpm format
+
+# Check formatting
+pnpm format:check
+
+# Run all checks (type-check, lint, format, test)
+pnpm check:all
 ```
 
 ## 🤝 Contributing
@@ -672,11 +779,6 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 ## 📄 License
 
 MIT
-
-## 🙏 Acknowledgments
-
-Micro AI is a research and learning project.
-It was built by one person, whom is trying to simplify AI, Agentic and AI Orchestration workflows specifically in Javascript abd Typescript.
 
 ---
 

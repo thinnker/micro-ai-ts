@@ -4,7 +4,14 @@ export { Agent } from './agent'
 export { Orchestrator } from './orchestrator'
 
 // Tool exports
-export { createTool } from './tools/index'
+export {
+  createTool,
+  createMCPTools,
+  createMCPTool,
+  disconnectAllMCPClients,
+  MCPClient,
+} from './tools/index'
+export type { MCPServerConfig, MCPToolSchema } from './tools/index'
 export { z } from 'zod'
 
 // Provider exports
