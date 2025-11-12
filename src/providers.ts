@@ -90,4 +90,10 @@ export const Providers = {
       process.env.NSCALE_BASE_URL || 'https://inference.api.nscale.com/v1',
     model,
   }),
+
+  minimax: (model = 'MiniMax-M2'): Provider => ({
+    apiKey: process.env.MINIMAX_API_KEY || '',
+    baseURL: process.env.MINIMAX_BASE_URL || 'https://api.minimax.io/v1',
+    model,
+  }),
 }

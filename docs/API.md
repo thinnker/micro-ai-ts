@@ -578,6 +578,9 @@ const client = new Micro({ model: 'deepseek:deepseek-chat' })
 
 // Nscale Serverless
 const client = new Micro({ model: 'nscale:meta-llama/Llama-3.1-8B-Instruct' })
+
+// Minimax
+const client = new Micro({ model: 'minimax:MiniMax-M2' })
 ```
 
 ### Custom Provider

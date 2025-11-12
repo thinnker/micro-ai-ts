@@ -289,6 +289,121 @@ declare class Orchestrator extends Agent {
  */
 declare function createTool<T extends z.ZodTypeAny, R>(name: string, description: string, schema: T, executeFn: (params: z.infer<T>) => Promise<R> | R): Tool;
 
+type MCPToolSchema = {
+    name: string;
+    description?: string;
+    inputSchema: {
+        type: 'object';
+        properties?: Record<string, any>;
+        required?: string[];
+    };
+};
+type MCPServerConfig = {
+    command: string;
+    args: string[];
+    env?: Record<string, string>;
+};
+/**
+ * MCP Protocol Client
+ * Handles communication with MCP servers via stdio
+ */
+declare class MCPClient {
+    private config;
+    private process;
+    private messageId;
+    private pendingRequests;
+    private buffer;
+    private isInitialized;
+    constructor(config: MCPServerConfig);
+    /**
+     * Start the MCP server and initialize connection
+     */
+    connect(): Promise<void>;
+    /**
+     * Handle incoming data from MCP server
+     */
+    private handleData;
+    /**
+     * Handle a parsed JSON-RPC message
+     */
+    private handleMessage;
+    /**
+     * Send a JSON-RPC request to the MCP server
+     */
+    private sendRequest;
+    /**
+     * List all available tools from the MCP server
+     */
+    listTools(): Promise<MCPToolSchema[]>;
+    /**
+     * Call a tool on the MCP server
+     */
+    callTool(name: string, args: any): Promise<any>;
+    /**
+     * Close the connection and cleanup
+     */
+    disconnect(): Promise<void>;
+    private cleanup;
+}
+
+/**
+ * Manually disconnect all active MCP clients
+ * Useful for cleaning up in long-running applications
+ *
+ * @example
+ * ```typescript
+ * const tools = await createMCPTools({ ... })
+ * // ... use tools ...
+ * await disconnectAllMCPClients() // Clean up when done
+ * ```
+ */
+declare function disconnectAllMCPClients(): Promise<void>;
+/**
+ * Create Micro AI tools from an MCP server
+ *
+ * @param config - MCP server configuration
+ * @param toolNames - Optional array of specific tool names to load (loads all if not specified)
+ * @returns Promise resolving to array of Tool objects
+ *
+ * @example
+ * ```typescript
+ * // Load all tools from an MCP server
+ * const tools = await createMCPTools({
+ *   command: 'uvx',
+ *   args: ['mcp-server-fetch']
+ * })
+ *
+ * // Load specific tools only
+ * const tools = await createMCPTools(
+ *   { command: 'uvx', args: ['mcp-server-fetch'] },
+ *   ['fetch']
+ * )
+ *
+ * // Use with Micro client
+ * const client = new Micro({
+ *   model: 'openai:gpt-4.1-mini',
+ *   tools
+ * })
+ * ```
+ */
+declare function createMCPTools(config: MCPServerConfig, toolNames?: string[]): Promise<Tool[]>;
+/**
+ * Create a single MCP tool
+ *
+ * @param config - MCP server configuration
+ * @param toolName - Name of the specific tool to load
+ * @returns Promise resolving to a Tool object
+ *
+ * @example
+ * ```typescript
+ * const fetchTool = await createMCPTool(
+ *   { command: 'uvx', args: ['mcp-server-fetch'] },
+ *   'fetch'
+ * )
+ * ```
+ */
+declare function createMCPTool(config: MCPServerConfig, toolName: string): Promise<Tool>;
+
 /**
  * Create a provider configuration object
  * Separates the model from the provider config for internal use
@@ -313,6 +428,7 @@ declare const Providers: {
     mistral: (model?: string) => Provider;
     together: (model?: string) => Provider;
     nscale: (model?: string) => Provider;
+    minimax: (model?: string) => Provider;
 };
 
 type HttpMethod = 'get' | 'GET' | 'delete' | 'DELETE' | 'head' | 'HEAD' | 'options' | 'OPTIONS' | 'post' | 'POST' | 'put' | 'PUT' | 'patch' | 'PATCH';
@@ -374,4 +490,4 @@ declare function parseTemplate(template: string, context?: Record<string, any>):
  */
 declare function slugify(text: string): string;
 
-export { Agent, type AgentOptions, type ContentOptions, type ContentPart, type ErrorPayload, type HttpClientOptions, type HttpError, type HttpMethod, type Message, type Metadata, Micro, type MicroOptions, type OnCompleteResponse, type OnErrorResponse, type OnMessageResponse, type OnRequestData, type OnResponseData, type OnToolCall, Orchestrator, type Provider, Providers, type ReasoningLevel, type ReasoningOptions, type Response, type StreamChunk, type StreamResponse, type TokenUsage, type Tool, type ToolCall, type ToolChoice, type ToolResponse, createProvider, createTool, del, get, head, http, httpClient, options, parseTemplate, patch, post, put, randomId, slugify };
+export { Agent, type AgentOptions, type ContentOptions, type ContentPart, type ErrorPayload, type HttpClientOptions, type HttpError, type HttpMethod, MCPClient, type MCPServerConfig, type MCPToolSchema, type Message, type Metadata, Micro, type MicroOptions, type OnCompleteResponse, type OnErrorResponse, type OnMessageResponse, type OnRequestData, type OnResponseData, type OnToolCall, Orchestrator, type Provider, Providers, type ReasoningLevel, type ReasoningOptions, type Response, type StreamChunk, type StreamResponse, type TokenUsage, type Tool, type ToolCall, type ToolChoice, type ToolResponse, createMCPTool, createMCPTools, createProvider, createTool, del, disconnectAllMCPClients, get, head, http, httpClient, options, parseTemplate, patch, post, put, randomId, slugify };

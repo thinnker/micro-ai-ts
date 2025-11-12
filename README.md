@@ -4,7 +4,7 @@ A lightweight, beginner-friendly TypeScript library for building LLM-powered app
 
 ## ✨ Features
 
-- **🔌 Multi-Provider Support** - Unified OpenAI-compatible (`/chat/completions`) interface for OpenAI, OpenRouter, Fireworks, Gemini, Anthropic (via compatible providers), Groq, Grok, DeepSeek, xAI, Mistral, Together, Nscale Serverless, 302.ai and more
+- **🔌 Multi-Provider Support** - Unified OpenAI-compatible (`/chat/completions`) interface for OpenAI, OpenRouter, Fireworks, Gemini, Anthropic (via compatible providers), Groq, Grok, DeepSeek, xAI, Mistral, Together, Nscale Serverless, 302.ai, Minimax and more
 - **🤖 Agentic Workflows** - Built-in Agent and Orchestrator classes for autonomous AI systems
 - **🛠️ Tool Calling** - Easy tool creation with automatic execution and Zod schema validation
 - **🔗 MCP Integration** - Native support for Model Context Protocol servers as tools
@@ -457,6 +457,9 @@ const client = new Micro({
 const client = new Micro({
   model: 'fireworks:accounts/fireworks/models/llama4-maverick-instruct-basic',
 })
+
+// Minimax
+const client = new Micro({ model: 'minimax:MiniMax-M2' })
 ```
 
 ### Custom Provider
@@ -637,6 +640,7 @@ The library includes comprehensive examples organized by category.
 - **[ai302.ts](./examples/providers/ai302.ts)** - 302.ai
 - **[deepseek.ts](./examples/providers/deepseek.ts)** - DeepSeek
 - **[nscale.ts](./examples/providers/nscale.ts)** - Nscale Serverless
+- **[minimax.ts](./examples/providers/minimax.ts)** - Minimax
 
 ### Agent
 
@@ -698,6 +702,7 @@ pnpm check:example examples/providers/fireworks.ts
 pnpm check:example examples/providers/ai302.ts
 pnpm check:example examples/providers/deepseek.ts
 pnpm check:example examples/providers/grok.ts
+pnpm check:example examples/providers/minimax.ts
 
 # Agent examples
 pnpm check:example examples/agent/calculator/calculator.ts
